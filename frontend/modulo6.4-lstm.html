@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Módulo 6.4 — LSTM Forecasts · Ernesto Investing AI</title>
+
+<!-- Plotly.js via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+
+<style>
+/* __INVESTAI_NAV_CSS__ */
+    body { display: block !important; align-items: unset !important; justify-content: unset !important; padding-top: 0 !important; }
+    .investai-navbar { background-color: #112244 !important; color: white !important; display: flex !important; align-items: center !important; padding: 0 10px !important; height: 50px !important; box-shadow: 0 2px 16px rgba(0,0,0,.18) !important; position: sticky !important; top: 0 !important; z-index: 9999 !important; box-sizing: border-box !important; width: 100% !important; overflow: hidden !important; flex-direction: column !important; justify-content: flex-start !important; padding-bottom: 0 !important; }
+    .investai-brand { display: flex !important; align-items: center !important; font-weight: bold !important; font-size: 14px !important; margin-right: 12px !important; color: white !important; text-decoration: none !important; flex-shrink: 0 !important; white-space: nowrap !important; }
+    .investai-brand-icon { color: #ffcc00 !important; margin-right: 8px !important; font-weight: 900 !important; }
+    .investai-nav-row { display: flex !important; align-items: center !important; width: 100% !important; height: 40px !important; flex-shrink: 0 !important; }
+    .investai-nav-links { display: flex !important; gap: 3px !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important; height: 34px !important; align-items: center !important; flex: 1 1 0% !important; min-width: 0 !important; -webkit-overflow-scrolling: touch !important; cursor: grab !important;
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(255,255,255,0.35) transparent !important;
+    }
+    .investai-nav-links::-webkit-scrollbar { display: block !important; height: 3px !important; }
+    .investai-nav-links::-webkit-scrollbar-track { background: transparent !important; }
+    .investai-nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35) !important; border-radius: 99px !important; }
+    .investai-nav-links::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6) !important; }
+    .investai-nav-links a { color: rgba(255, 255, 255, 0.65) !important; text-decoration: none !important; padding: 4px 7px !important; border-radius: 5px !important; font-size: 11px !important; font-weight: 500 !important; transition: background 0.2s ease, color 0.2s ease !important; flex-shrink: 0 !important; cursor: pointer !important; display: inline-block !important; }
+    .investai-nav-links a:hover { color: white !important; background-color: rgba(255, 255, 255, 0.10) !important; }
+    .investai-nav-links a.active-tab { background-color: #ffcc00 !important; color: #112244 !important; font-weight: 700 !important; }
+/* __INVESTAI_NAV_CSS__ */
+
+/* ══════════════════════════════════════════════
+   TOKENS DE DISEÑO
+   Paleta: grafito oscuro + cian eléctrico como
+   acento único. Tipografía monoespaciada para
+   datos, Inter para prosa.
+══════════════════════════════════════════════ */
+:root {
+  --bg:          #080c10;
+  --surface:     #0f1419;
+  --surface-2:   #151c24;
+  --border:      #1e2836;
+  --border-2:    #253040;
+  --text:        #cdd9e5;
+  --muted:       #5c6e82;
+  --lstm:        #38bdf8;      /* azul cian — predicción LSTM   */
+  --arima:       #a78bfa;      /* violeta     — predicción ARIMA */
+  --real:        #e2e8f0;      /* blanco hueso — precio real     */
+  --future-fill: rgba(56,189,248,0.07);
+  --up:          #34d399;
+  --down:        #f87171;
+  --warn:        #fbbf24;
+  --font-mono:   'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-sans:   'Inter', system-ui, sans-serif;
+  --r:           8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* ── CABECERA ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 20;
+  gap: 12px;
+}
+
+.hd-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.module-tag {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .10em;
+  padding: 4px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.hd-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hd-sub {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Ticker chip */
+.ticker-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--lstm);
+  font-weight: 700;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.ticker-dot {
+  width: 7px; height: 7px;
+  background: var(--up);
+  border-radius: 50%;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,100% { opacity:1; } 50% { opacity:.3; }
+}
+
+/* ── CUERPO ── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: calc(100vh - 53px);
+}
+
+/* ── PANEL IZQUIERDO (parámetros + métricas) ── */
+.sidebar {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.panel-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Parámetros técnicos */
+.param-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.param-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.param-key {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.param-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--lstm);
+  font-weight: 600;
+}
+
+/* Arquitectura LSTM */
+.arch-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.arch-layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.al-lstm   { background: rgba(56,189,248,.08); color: var(--lstm); border-left: 2px solid var(--lstm); }
+.al-drop   { background: rgba(251,191,36,.06); color: var(--warn); border-left: 2px solid var(--warn); }
+.al-dense  { background: rgba(52,211,153,.07); color: var(--up);   border-left: 2px solid var(--up);   }
+.al-out    { background: rgba(248,113,113,.07);color: var(--down);  border-left: 2px solid var(--down); }
+
+.arch-arrow {
+  text-align: center;
+  color: var(--border-2);
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Métricas */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.metric-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 10px 8px;
+}
+
+.m-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.m-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--lstm);
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.m-sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+/* Leyenda de series */
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.leg-line {
+  width: 24px; height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.leg-dashed {
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0, currentColor 4px,
+    transparent 4px, transparent 8px
+  );
+  height: 0;
+  border-top: 2px dashed;
+}
+
+/* ── ZONA PRINCIPAL (gráfico + controles) ── */
+.main-area {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Control de días de predicción */
+.controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.ctrl-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Slider personalizado */
+.slider-wrap {
+  flex: 1;
+  min-width: 160px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border-2);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--lstm);
+  box-shadow: 0 0 8px rgba(56,189,248,.5);
+  cursor: pointer;
+  transition: transform .15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  padding: 0 1px;
+}
+
+/* Badge de días seleccionados */
+.days-badge {
+  background: rgba(56,189,248,.12);
+  border: 1px solid rgba(56,189,248,.30);
+  color: var(--lstm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  min-width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Toggle de bandas de confianza */
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  padding: 5px 11px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--muted);
+  transition: all .2s;
+  white-space: nowrap;
+}
+
+.toggle-btn.active {
+  border-color: rgba(56,189,248,.4);
+  color: var(--lstm);
+  background: rgba(56,189,248,.07);
+}
+
+.toggle-btn .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: background .2s;
+}
+
+.toggle-btn.active .dot { background: var(--lstm); }
+
+/* Gráfico */
+#plotDiv {
+  flex: 1;
+  min-height: 400px;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 8px 24px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  display: flex;
+  justify-content: space-between;
+  background: var(--surface);
+  flex-wrap: wrap;
+  gap: 4px;
+}
+</style>
+</head>
+<body>
+<nav class="investai-navbar">
+    <a href="index.html" class="investai-brand">
+        <span class="investai-brand-icon">|||</span> InvestAI
+    </a>
+    <div class="investai-nav-links">
+        <a href="modulo6.1-autenticacion.html" id="nav-m1" data-mod="m1" onclick="navigateModule('m1', event)">Autenticación (M1)</a>
+        <a href="modulo_mercado.html" id="nav-m2" data-mod="m2" onclick="navigateModule('m2', event)">Ingesta de Datos (M2)</a>
+        <a href="modulo_svc.html" id="nav-m3" data-mod="m3" onclick="navigateModule('m3', event)">Predicciones SVC (M3)</a>
+        <a href="modulo6.4-lstm.html" id="nav-m4" data-mod="m4" onclick="navigateModule('m4', event)" class="active-tab">Pronósticos LSTM (M4)</a>
+        <a href="modulo6.5-nlp-operaciones.html" id="nav-m5" data-mod="m5" onclick="navigateModule('m5', event)">Análisis NLP (M5)</a>
+        <a href="modulo6.6-core-predictivo-central.html" id="nav-m6" data-mod="m6" onclick="navigateModule('m6', event)">Core Predictivo (M6)</a>
+        <a href="modulo6.7-estrategias.html" id="nav-m7" data-mod="m7" onclick="navigateModule('m7', event)">Estrategias (M7)</a>
+        <a href="modulo6.8-ordenes.html" id="nav-m8" data-mod="m8" onclick="navigateModule('m8', event)">Órdenes (M8)</a>
+        <a href="modulo6.9-portafolio.html" id="nav-m9" data-mod="m9" onclick="navigateModule('m9', event)">Portafolios (M9)</a>
+        <a href="modulo6.10-consola.html" id="nav-m10" data-mod="m10" onclick="navigateModule('m10', event)">Consola (M10)</a>
+        <a href="modulo6.11-backtesting.html" id="nav-m11" data-mod="m11" onclick="navigateModule('m11', event)">Backtesting (M11)</a>
+    </div>
+</nav>
+
+<!-- ══════════ CABECERA ══════════ -->
+<header>
+  <div class="hd-left">
+    <span class="module-tag">MÓD 6.4</span>
+    <div>
+      <div class="hd-title">LSTM Forecasts — Predicción de Precio</div>
+      <div class="hd-sub">Ernesto Investing AI · Regresión continua USD</div>
+    </div>
+  </div>
+
+<select id="ticker-select" onchange="cambiarTicker(this.value)"
+  style="background:var(--surface-2);border:1px solid var(--border-2);border-radius:20px;
+         padding:5px 13px;font-family:var(--font-mono);font-size:12px;
+         color:var(--lstm);font-weight:700;cursor:pointer;outline:none;">
+  <option value="FSM">FSM — Fortuna Silver</option>
+  <option value="VOLCABC1.LM">VOLCABC1.LM — Volcán</option>
+  <option value="ABX.TO">ABX.TO — Barrick Gold</option>
+  <option value="BVN">BVN — Buenaventura</option>
+  <option value="BHP">BHP — BHP Group</option>
+</select>
+</header>
+
+<!-- ══════════ LAYOUT PRINCIPAL ══════════ -->
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Parámetros del modelo -->
+    <section>
+      <div class="panel-label">Parámetros del modelo</div>
+      <div class="param-list">
+        <div class="param-row"><span class="param-key">Épocas</span>       <span class="param-val">80</span></div>
+        <div class="param-row"><span class="param-key">Batch size</span>   <span class="param-val">32</span></div>
+        <div class="param-row"><span class="param-key">Ventana</span>       <span class="param-val">60 días</span></div>
+        <div class="param-row"><span class="param-key">Learning rate</span> <span class="param-val">0.001</span></div>
+        <div class="param-row"><span class="param-key">Dropout</span>       <span class="param-val">0.20</span></div>
+        <div class="param-row"><span class="param-key">Optimizador</span>   <span class="param-val">Adam</span></div>
+        <div class="param-row"><span class="param-key">Loss fn.</span>      <span class="param-val">MSE</span></div>
+      </div>
+    </section>
+
+    <!-- Arquitectura -->
+    <section>
+      <div class="panel-label">Arquitectura LSTM</div>
+      <div class="arch-flow">
+        <div class="arch-layer al-lstm">LSTM(64, return_seq=True)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer al-drop">Dropout(0.20)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer al-lstm">LSTM(32)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer al-drop">Dropout(0.20)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer al-dense">Dense(16, relu)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer al-out">Dense(1, linear)</div>
+      </div>
+    </section>
+
+    <!-- Métricas -->
+    <section>
+      <div class="panel-label">Métricas de evaluación</div>
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="m-label">RMSE</div>
+          <div class="m-val" id="m-rmse-usd">—</div>
+          <div class="m-sub">USD absoluto</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">RMSE %</div>
+          <div class="m-val" id="m-rmse-pct">—</div>
+          <div class="m-sub">sobre precio medio</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">MAE</div>
+          <div class="m-val" id="m-mae">—</div>
+          <div class="m-sub">error absoluto</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">R²</div>
+          <div class="m-val" id="m-r2">—</div>
+          <div class="m-sub">coef. determinación</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leyenda -->
+    <section>
+      <div class="panel-label">Leyenda de series</div>
+      <div class="legend-list">
+        <div class="legend-row">
+          <div class="leg-line" style="background:var(--real)"></div>
+          Precio real <span id="legend-ticker">FSM</span>
+        </div>
+        <div class="legend-row">
+          <div class="leg-line leg-dashed" style="color:var(--lstm)"></div>
+          Predicción LSTM
+        </div>
+        <div class="legend-row">
+          <div class="leg-line leg-dashed" style="color:var(--arima)"></div>
+          Predicción ARIMA-LSTM
+        </div>
+        <div class="legend-row">
+          <div style="width:24px;height:10px;background:var(--future-fill);border:1px solid rgba(56,189,248,.2);border-radius:2px;flex-shrink:0"></div>
+          Banda de confianza 95%
+        </div>
+      </div>
+    </section>
+
+  </aside>
+
+  <!-- ── ÁREA PRINCIPAL ── -->
+  <div class="main-area">
+
+    <!-- Barra de controles -->
+    <div class="controls-bar">
+      <span class="ctrl-label">Días de predicción:</span>
+
+      <div class="slider-wrap">
+        <input type="range" id="dias-slider" min="0" max="3" step="1" value="2"
+               oninput="actualizarDias(this.value)">
+        <div class="slider-ticks">
+          <span>7</span><span>14</span><span>30</span><span>60</span>
+        </div>
+      </div>
+
+      <div class="days-badge" id="days-badge">30 días</div>
+
+      <button class="toggle-btn active" id="banda-btn" onclick="toggleBanda()">
+        <span class="dot"></span>
+        Banda de confianza
+      </button>
+    </div>
+
+    <!-- Gráfico Plotly -->
+    <div id="plotDiv"></div>
+
+    <!-- Footer -->
+    <footer>
+      <span>LSTM(64)→Drop(0.2)→LSTM(32)→Drop(0.2)→Dense(16,relu)→Dense(1,linear) · ventana=60d · lr=0.001</span>
+      <span id="footer-ts"></span>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  GENERACIÓN DE DATOS SIMULADOS — tendencia alcista realista AAPL
+// ═══════════════════════════════════════════════════════════════════
+
+// Mapa de pasos del slider → días de predicción futura
+const PASO_A_DIAS = [7, 14, 30, 60];
+
+let bandaVisible = true;
+
+// Normal estándar (Box-Muller)
+function randn() {
+  let u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/**
+ * Genera serie de precios históricos con GBM + componente de ciclo.
+ * @param {number} n      - días históricos
+ * @param {number} s0     - precio inicial
+ * @param {number} mu     - drift diario
+ * @param {number} sigma  - volatilidad diaria
+ */
+function simularPrecios(n = 180, s0 = 165, mu = 0.0006, sigma = 0.014) {
+  const arr = [s0];
+  for (let i = 1; i < n; i++) {
+    const ciclo = 0.0003 * Math.sin(i / 22 * Math.PI); // ciclo mensual suave
+    const r = mu + ciclo + sigma * randn();
+    arr.push(+(arr[i - 1] * Math.exp(r)).toFixed(3));
+  }
+  return arr;
+}
+
+/**
+ * Simula predicciones LSTM: sigue el precio real con ruido reducido
+ * y un ligero lag (simula la inercia del modelo).
+ */
+function simularPredLSTM(reales, lag = 1, noise = 0.006) {
+  return reales.map((p, i) => {
+    const base = reales[Math.max(0, i - lag)];
+    return +(base * (1 + noise * randn())).toFixed(3);
+  });
+}
+
+/**
+ * Simula predicciones ARIMA-LSTM: mayor suavizado, algo más conservador.
+ */
+function simularPredARIMA(reales, noise = 0.009) {
+  // Suavizado exponencial simple como proxy de ARIMA
+  const alpha = 0.15;
+  const suav = [reales[0]];
+  for (let i = 1; i < reales.length; i++) {
+    suav.push(alpha * reales[i] + (1 - alpha) * suav[i - 1]);
+  }
+  return suav.map(p => +(p * (1 + noise * randn())).toFixed(3));
+}
+
+/**
+ * Genera fechas de días hábiles hacia atrás desde hoy.
+ */
+function generarFechasHist(n) {
+  const arr = [];
+  const d = new Date();
+  let count = 0;
+  while (count < n) {
+    d.setDate(d.getDate() - 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      arr.unshift(d.toISOString().slice(0, 10));
+      count++;
+    }
+  }
+  return arr;
+}
+
+/**
+ * Genera fechas de días hábiles hacia adelante desde hoy.
+ */
+function generarFechasFut(n) {
+  const arr = [];
+  const d = new Date();
+  let count = 0;
+  while (count < n) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      arr.push(d.toISOString().slice(0, 10));
+      count++;
+    }
+  }
+  return arr;
+}
+
+/**
+ * Proyecta precios futuros desde el último precio histórico.
+ * Devuelve { lstm, arima, upper, lower } para la banda de confianza.
+ */
+function proyectarFuturo(ultimoPrecio, n, mu = 0.0006, sigma = 0.014) {
+  const lstm = [ultimoPrecio];
+  const arima = [ultimoPrecio];
+
+  for (let i = 1; i <= n; i++) {
+    // LSTM — levemente más agresivo
+    const rL = mu + sigma * randn();
+    lstm.push(+(lstm[i - 1] * Math.exp(rL)).toFixed(3));
+    // ARIMA-LSTM — más suave/conservador
+    const rA = mu * 0.7 + sigma * 0.65 * randn();
+    arima.push(+(arima[i - 1] * Math.exp(rA)).toFixed(3));
+  }
+
+  // Banda de confianza: ±2σ acumulado (se ensancha con el tiempo)
+  const upper = lstm.map((p, i) => +(p * (1 + 2 * sigma * Math.sqrt(i + 1))).toFixed(3));
+  const lower = lstm.map((p, i) => +(p * (1 - 2 * sigma * Math.sqrt(i + 1))).toFixed(3));
+
+  return { lstm: lstm.slice(1), arima: arima.slice(1), upper: upper.slice(1), lower: lower.slice(1) };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CÁLCULO DE MÉTRICAS
+// ═══════════════════════════════════════════════════════════════════
+
+function calcularMetricas(reales, predicciones) {
+  const n = reales.length;
+  const meanReal = reales.reduce((a, b) => a + b, 0) / n;
+
+  // RMSE
+  const mse = reales.reduce((acc, r, i) => acc + (r - predicciones[i]) ** 2, 0) / n;
+  const rmse = Math.sqrt(mse);
+  const rmsePct = (rmse / meanReal * 100);
+
+  // MAE
+  const mae = reales.reduce((acc, r, i) => acc + Math.abs(r - predicciones[i]), 0) / n;
+
+  // R²
+  const ssTot = reales.reduce((acc, r) => acc + (r - meanReal) ** 2, 0);
+  const ssRes = reales.reduce((acc, r, i) => acc + (r - predicciones[i]) ** 2, 0);
+  const r2 = 1 - ssRes / ssTot;
+
+  return { rmse, rmsePct, mae, r2 };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════════
+
+// Precios base por ticker minero
+const TICKER_CONFIG = {
+  'FSM':         { s0: 6.50,  mu: 0.0004, sigma: 0.018 },
+  'VOLCABC1.LM': { s0: 0.45,  mu: 0.0002, sigma: 0.022 },
+  'ABX.TO':      { s0: 18.20, mu: 0.0005, sigma: 0.015 },
+  'BVN':         { s0: 12.80, mu: 0.0004, sigma: 0.017 },
+  'BHP':         { s0: 48.50, mu: 0.0003, sigma: 0.013 }
+};
+
+let tickerActual = 'FSM';
+
+function cambiarTicker(ticker) {
+  tickerActual = ticker;
+  document.getElementById('legend-ticker').textContent = ticker;
+  
+  const cfg = TICKER_CONFIG[ticker];
+  
+  // Regenerar datos con parámetros del ticker seleccionado
+  const nuevosPrecios = simularPrecios(N_HIST, cfg.s0, cfg.mu, cfg.sigma);
+  const nuevasPredLSTM = simularPredLSTM(nuevosPrecios);
+  const nuevasPredARIMA = simularPredARIMA(nuevosPrecios);
+  const nuevasMetricas = calcularMetricas(nuevosPrecios, nuevasPredLSTM);
+
+  // Actualizar métricas en pantalla
+  document.getElementById('m-rmse-usd').textContent = `$${nuevasMetricas.rmse.toFixed(4)}`;
+  document.getElementById('m-rmse-pct').textContent = `${nuevasMetricas.rmsePct.toFixed(2)}%`;
+  document.getElementById('m-mae').textContent      = `$${nuevasMetricas.mae.toFixed(4)}`;
+  document.getElementById('m-r2').textContent       = nuevasMetricas.r2.toFixed(4);
+
+  // Actualizar variables globales y redibujar
+  histPrecios.length = 0;
+  predLSTM_h.length = 0;
+  predARIMA_h.length = 0;
+  nuevosPrecios.forEach(p => histPrecios.push(p));
+  nuevasPredLSTM.forEach(p => predLSTM_h.push(p));
+  nuevasPredARIMA.forEach(p => predARIMA_h.push(p));
+
+  const paso = document.getElementById('dias-slider').value;
+  renderGrafico(PASO_A_DIAS[+paso]);
+}
+    
+const N_HIST = 180;
+
+// Generamos una vez los datos históricos (estables entre actualizaciones)
+const cfg0 = TICKER_CONFIG['FSM'];
+const histPrecios = simularPrecios(N_HIST, cfg0.s0, cfg0.mu, cfg0.sigma);
+const histFechas   = generarFechasHist(N_HIST);
+const predLSTM_h   = simularPredLSTM(histPrecios);
+const predARIMA_h  = simularPredARIMA(histPrecios);
+
+// Calculamos métricas y las pintamos
+const metricas = calcularMetricas(histPrecios, predLSTM_h);
+
+document.getElementById('m-rmse-usd').textContent = `$${metricas.rmse.toFixed(4)}`;
+document.getElementById('m-rmse-pct').textContent = `${metricas.rmsePct.toFixed(2)}%`;
+document.getElementById('m-mae').textContent      = `$${metricas.mae.toFixed(4)}`;
+document.getElementById('m-r2').textContent       = metricas.r2.toFixed(4);
+
+// Timestamp en footer
+document.getElementById('footer-ts').textContent =
+  'Simulado · ' + new Date().toLocaleString('es-PE');
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDERIZADO CON PLOTLY
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Construye y renderiza (o actualiza) el gráfico Plotly.
+ * @param {number} diasFut  - número de días futuros a proyectar
+ */
+function renderGrafico(diasFut) {
+  const futFechas  = generarFechasFut(diasFut);
+  const ultimo     = histPrecios[histPrecios.length - 1];
+  const futProj    = proyectarFuturo(ultimo, diasFut);
+
+  // Fecha de unión (último histórico)
+  const fechaCorte = histFechas[histFechas.length - 1];
+
+  // ── Traza 1: Precio real ──
+  const tReal = {
+    x: histFechas,
+    y: histPrecios,
+    type: 'scatter',
+    mode: 'lines',
+    name: 'Precio real',
+    line: { color: '#e2e8f0', width: 1.8 },
+    hovertemplate: '<b>%{x}</b><br>Real: $%{y:.2f}<extra></extra>',
+  };
+
+  // ── Traza 2: Predicción LSTM histórica ──
+  const tLSTM_h = {
+    x: histFechas,
+    y: predLSTM_h,
+    type: 'scatter',
+    mode: 'lines',
+    name: 'LSTM (histórico)',
+    line: { color: '#38bdf8', width: 1.6, dash: 'dash' },
+    hovertemplate: '<b>%{x}</b><br>LSTM: $%{y:.2f}<extra></extra>',
+  };
+
+  // ── Traza 3: Predicción ARIMA-LSTM histórica ──
+  const tARIMA_h = {
+    x: histFechas,
+    y: predARIMA_h,
+    type: 'scatter',
+    mode: 'lines',
+    name: 'ARIMA-LSTM (histórico)',
+    line: { color: '#a78bfa', width: 1.6, dash: 'dot' },
+    hovertemplate: '<b>%{x}</b><br>ARIMA-LSTM: $%{y:.2f}<extra></extra>',
+  };
+
+  // ── Traza 4: Proyección futura LSTM ──
+  const tLSTM_f = {
+    x: [fechaCorte, ...futFechas],
+    y: [ultimo, ...futProj.lstm],
+    type: 'scatter',
+    mode: 'lines',
+    name: `LSTM +${diasFut}d`,
+    line: { color: '#38bdf8', width: 2, dash: 'dash' },
+    hovertemplate: '<b>%{x}</b><br>LSTM fut: $%{y:.2f}<extra></extra>',
+  };
+
+  // ── Traza 5: Proyección futura ARIMA-LSTM ──
+  const tARIMA_f = {
+    x: [fechaCorte, ...futFechas],
+    y: [ultimo, ...futProj.arima],
+    type: 'scatter',
+    mode: 'lines',
+    name: `ARIMA-LSTM +${diasFut}d`,
+    line: { color: '#a78bfa', width: 2, dash: 'dot' },
+    hovertemplate: '<b>%{x}</b><br>ARIMA-LSTM fut: $%{y:.2f}<extra></extra>',
+  };
+
+  // ── Traza 6: Banda superior (IC 95%) ──
+  const tUpper = {
+    x: [fechaCorte, ...futFechas],
+    y: [ultimo, ...futProj.upper],
+    type: 'scatter',
+    mode: 'lines',
+    name: 'IC 95% superior',
+    line: { color: 'transparent' },
+    showlegend: false,
+    hoverinfo: 'skip',
+    visible: bandaVisible,
+  };
+
+  // ── Traza 7: Banda inferior (IC 95%) — relleno hasta tUpper ──
+  const tLower = {
+    x: [fechaCorte, ...futFechas],
+    y: [ultimo, ...futProj.lower],
+    type: 'scatter',
+    mode: 'lines',
+    name: 'Banda IC 95%',
+    fill: 'tonexty',
+    fillcolor: 'rgba(56,189,248,0.09)',
+    line: { color: 'transparent' },
+    showlegend: bandaVisible,
+    hoverinfo: 'skip',
+    visible: bandaVisible,
+  };
+
+  // ── Línea vertical de corte histórico/futuro ──
+  const shapes = [{
+    type: 'line',
+    x0: fechaCorte, x1: fechaCorte,
+    y0: 0, y1: 1,
+    yref: 'paper',
+    line: { color: 'rgba(255,255,255,0.15)', width: 1, dash: 'dot' },
+  }];
+
+  // Anotación de zona futura
+  const annotations = [{
+    x: futFechas[Math.floor(futFechas.length / 2)] || fechaCorte,
+    y: 1,
+    yref: 'paper',
+    text: `◂ proyección ${diasFut} días ▸`,
+    showarrow: false,
+    font: { size: 10, color: 'rgba(56,189,248,0.55)', family: 'JetBrains Mono, monospace' },
+    xanchor: 'center',
+  }];
+
+  const layout = {
+    paper_bgcolor: '#080c10',
+    plot_bgcolor:  '#080c10',
+    font: { family: 'Inter, system-ui, sans-serif', color: '#5c6e82', size: 11 },
+    margin: { t: 24, b: 48, l: 58, r: 28 },
+    legend: {
+      orientation: 'h',
+      y: -0.12, x: 0,
+      bgcolor: 'transparent',
+      font: { size: 10, color: '#5c6e82' },
+    },
+    xaxis: {
+      type: 'date',
+      gridcolor: 'rgba(255,255,255,0.04)',
+      linecolor: '#1e2836',
+      tickcolor: '#1e2836',
+      tickfont: { size: 10 },
+      showspikes: true,
+      spikecolor: 'rgba(56,189,248,0.3)',
+      spikethickness: 1,
+    },
+    yaxis: {
+      gridcolor: 'rgba(255,255,255,0.05)',
+      linecolor: '#1e2836',
+      tickcolor: '#1e2836',
+      tickfont: { size: 10, family: 'JetBrains Mono, monospace' },
+      tickprefix: '$',
+      showspikes: true,
+      spikecolor: 'rgba(56,189,248,0.3)',
+      spikethickness: 1,
+    },
+    shapes,
+    annotations,
+    hovermode: 'x unified',
+    hoverlabel: {
+      bgcolor: '#0f1419',
+      bordercolor: '#1e2836',
+      font: { color: '#cdd9e5', size: 11 },
+    },
+  };
+
+  const config = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'toggleSpikelines'],
+    displaylogo: false,
+    toImageButtonOptions: { format: 'png', filename: 'lstm_forecast_aapl' },
+  };
+
+  Plotly.react('plotDiv',
+    [tReal, tLSTM_h, tARIMA_h, tUpper, tLower, tLSTM_f, tARIMA_f],
+    layout,
+    config
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONTROLES INTERACTIVOS
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Actualiza el gráfico cuando el usuario mueve el slider.
+ * @param {string|number} paso - índice 0..3
+ */
+function actualizarDias(paso) {
+  const dias = PASO_A_DIAS[+paso];
+  document.getElementById('days-badge').textContent = `${dias} días`;
+  renderGrafico(dias);
+}
+
+/**
+ * Activa/desactiva la banda de confianza.
+ */
+function toggleBanda() {
+  bandaVisible = !bandaVisible;
+  const btn = document.getElementById('banda-btn');
+  btn.classList.toggle('active', bandaVisible);
+
+  // Actualizar visibilidad de trazas 3 (upper) y 4 (lower) — índices 3 y 4
+  Plotly.restyle('plotDiv', { visible: bandaVisible }, [3, 4]);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+renderGrafico(30); // valor por defecto del slider (paso 2 → 30 días)
+
+/* __INVESTAI_NAV_JS__ */
+    (function(){
+      const slider = document.querySelector('.investai-nav-links');
+      if(slider){
+        let isDown=false, startX, scrollLeft, moved=false;
+        slider.addEventListener('mousedown', e=>{ isDown=true; moved=false; startX=e.pageX-slider.offsetLeft; scrollLeft=slider.scrollLeft; slider.style.cursor='grabbing'; });
+        slider.addEventListener('mouseleave', ()=>{ isDown=false; slider.style.cursor='grab'; });
+        slider.addEventListener('mouseup', ()=>{ isDown=false; slider.style.cursor='grab'; });
+        slider.addEventListener('mousemove', e=>{ if(!isDown) return; e.preventDefault(); moved=true; const x=e.pageX-slider.offsetLeft; slider.scrollLeft=scrollLeft-(x-startX)*1.5; });
+        slider.addEventListener('click', e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
+      }
+      if(typeof window.navigateModule!=='undefined') return;
+      const cfg={
+        m1:{title:"Autenticación (M1)",desc:"Gestión de seguridad, tokens JWT y control de acceso MFA.",icon:"🔐"},
+        m2:{title:"Ingesta de Datos (M2)",desc:"Pipelines de captura y streaming desde APIs financieras.",icon:"📥"},
+        m3:{title:"Clasificación (M3)",desc:"Etiquetado de patrones de mercado mediante algoritmos supervisados.",icon:"🏷️"},
+        m4:{title:"Regresión (M4)",desc:"Modelos para estimación de precios objetivos.",icon:"📊"},
+        m5:{title:"Análisis NLP (M5)",desc:"Procesamiento de Lenguaje Natural sobre noticias financieras.",icon:"💬"},
+        m6:{title:"Core Predictivo (M6)",desc:"Núcleo central de IA que coordina todos los módulos.",icon:"🧠"},
+        m7:{title:"Estrategias (M7)",desc:"Generación algorítmica de reglas operativas.",icon:"💡"},
+        m8:{title:"Órdenes (M8)",desc:"Enrutador inteligente con control estricto de Slippage.",icon:"⚡"},
+        m9:{title:"Portafolios (M9)",desc:"Rebalanceo automático mediante optimización de varianza media.",icon:"💼"},
+        m10:{title:"Consola (M10)",desc:"Panel de administración para control de umbrales operativos.",icon:"🖥️"},
+        m11:{title:"Backtesting (M11)",desc:"Simulador sobre series históricas con métricas Sharpe y Sortino.",icon:"⏳"}
+      };
+      window.navigateModule=function(id,e){
+        const link=document.getElementById('nav-'+id); if(!link) return;
+        const url=link.getAttribute('href');
+        if(!url||url==='#'){e.preventDefault();window.showPlaceholderView(id);return;}
+        e.preventDefault();
+        fetch(url,{method:'HEAD'}).then(r=>r.ok?window.location.href=url:window.showPlaceholderView(id)).catch(()=>window.location.href=url);
+      };
+      window.showPlaceholderView=function(id){
+        const c=cfg[id]; if(!c) return;
+        document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active-view'));
+        const ph=document.getElementById('view-placeholder');
+        if(ph){
+          const keys=['placeholder-title','placeholder-panel-title','placeholder-desc','placeholder-icon'];
+          const vals=[c.title,c.title+' en Desarrollo',c.desc,c.icon];
+          keys.forEach((k,i)=>{ const el=document.getElementById(k); if(el) el.innerText=vals[i]; });
+          ph.classList.add('active-view');
+        }
+        document.querySelectorAll('.investai-nav-links a').forEach(a=>a.classList.remove('active-tab'));
+        const al=document.getElementById('nav-'+id); if(al) al.classList.add('active-tab');
+      };
+      window.resetToCore=function(){window.location.href='modulo6.6-core-predictivo-central.html';};
+    })();
+/* __INVESTAI_NAV_JS__ */
+  </script>
+  <script src="investai-api-integration.js"></script>
+</body>
+</html>

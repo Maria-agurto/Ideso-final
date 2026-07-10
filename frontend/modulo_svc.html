@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernesto Investing AI · Clasificador SVC</title>
+
+<!-- Tailwind CSS vía CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Plotly.js para la matriz de confusión -->
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+<script>
+  // Extendemos la paleta institucional del proyecto InvestAI
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          azulinst: '#1F3864',
+          azulinst2: '#16294C',
+          oro: '#C5961A',
+          oroclaro: '#E4B94E',
+          panel: '#12203C',
+          fondo: '#0B1526'
+        },
+        fontFamily: {
+          mono: ['"JetBrains Mono"', 'monospace'],
+          sans: ['"Inter"', 'sans-serif']
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Fondo con textura sutil tipo "grid financiero" */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(197,150,26,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(197,150,26,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Animación del spinner de carga */
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .spinner { animation: girar 0.9s linear infinite; }
+
+  /* Transición suave para la tarjeta de señal */
+  .tarjeta-senal {
+    transition: background 0.4s ease, box-shadow 0.4s ease, transform 0.2s ease;
+  }
+
+  /* Barra decorativa dorada superior */
+  .barra-oro {
+    background: linear-gradient(90deg, #C5961A 0%, #E4B94E 50%, #C5961A 100%);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23C5961A'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    background-size: 1.1rem;
+  }
+</style>
+</head>
+
+<body class="bg-fondo bg-grid min-h-screen text-slate-200">
+
+  <!-- Barra superior institucional -->
+  <div class="barra-oro h-1 w-full"></div>
+
+  <header class="border-b border-white/10 bg-azulinst2/60 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-oro/90 flex items-center justify-center font-mono font-bold text-azulinst2 text-lg">Σ</div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white">Ernesto Investing AI</h1>
+          <p class="text-xs text-oroclaro/80 font-mono">Módulo · Clasificador SVC</p>
+        </div>
+      </div>
+      <a href="index.html" class="text-xs text-slate-400 hover:text-oroclaro transition font-mono">&larr; Volver al portal</a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-10 space-y-8">
+
+    <!-- Selector de ticker y estado de la API -->
+    <section class="bg-panel/70 border border-white/10 rounded-2xl p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+        <div class="flex-1">
+          <label for="selectorTicker" class="block text-xs font-mono uppercase tracking-widest text-oroclaro/80 mb-2">
+            Instrumento minero
+          </label>
+          <select id="selectorTicker"
+            class="w-full sm:w-72 appearance-none bg-fondo border border-white/15 rounded-lg px-4 py-3 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-oro/60 focus:border-oro cursor-pointer">
+            <option value="FSM">FSM · Fortuna Silver Mines</option>
+            <option value="VOLCABC1.LM">VOLCABC1.LM · Volcan Compañía Minera</option>
+            <option value="ABX.TO">ABX.TO · Barrick Gold</option>
+            <option value="BVN">BVN · Buenaventura</option>
+            <option value="BHP">BHP · BHP Group</option>
+          </select>
+        </div>
+
+        <div class="text-xs font-mono text-right space-y-1">
+          <p class="text-slate-500">Endpoint API</p>
+          <p id="estadoUrlApi" class="text-oroclaro/90 truncate max-w-[280px]">Verificando sessionStorage…</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Zona de mensajes: carga / error -->
+    <div id="zonaEstado" class="hidden">
+      <div id="mensajeCargando" class="hidden items-center justify-center gap-3 py-14 text-slate-400">
+        <svg class="spinner w-6 h-6 text-oro" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"/>
+          <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="font-mono text-sm">Cargando datos del modelo…</span>
+      </div>
+
+      <div id="mensajeError" class="hidden bg-red-950/40 border border-red-500/30 rounded-2xl p-6 text-center">
+        <p class="text-red-300 font-semibold mb-1">No se pudieron obtener los datos</p>
+        <p id="detalleError" class="text-sm text-red-400/80 font-mono"></p>
+        <p class="text-xs text-slate-500 mt-3">Verifica que el túnel de ngrok y el backend de FastAPI en Colab sigan activos.</p>
+      </div>
+    </div>
+
+    <!-- Contenido principal: se muestra solo cuando hay datos -->
+    <div id="contenidoPrincipal" class="hidden space-y-8">
+
+      <!-- Tarjeta de señal actual -->
+      <section id="tarjetaSenal" class="tarjeta-senal rounded-2xl p-8 border shadow-xl flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <p class="text-xs font-mono uppercase tracking-widest text-white/70 mb-1">Señal del modelo · <span id="tickerActivo" class="text-oroclaro">FSM</span></p>
+          <p id="textoSenal" class="text-5xl font-extrabold tracking-tight text-white">—</p>
+        </div>
+        <div id="iconoSenal" class="w-16 h-16 rounded-full flex items-center justify-center bg-white/10 text-3xl">
+          ⏳
+        </div>
+      </section>
+
+      <!-- Métricas de evaluación -->
+      <section>
+        <h2 class="text-sm font-mono uppercase tracking-widest text-oroclaro/80 mb-4">Métricas de evaluación del modelo</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+          <div class="bg-panel/70 border border-white/10 rounded-xl p-5">
+            <p class="text-xs text-slate-400 font-mono mb-1">Accuracy</p>
+            <p id="valorAccuracy" class="text-2xl font-bold text-white font-mono">—</p>
+          </div>
+
+          <div class="bg-panel/70 border border-white/10 rounded-xl p-5">
+            <p class="text-xs text-slate-400 font-mono mb-1">Precision</p>
+            <p id="valorPrecision" class="text-2xl font-bold text-white font-mono">—</p>
+          </div>
+
+          <div class="bg-panel/70 border border-white/10 rounded-xl p-5">
+            <p class="text-xs text-slate-400 font-mono mb-1">Recall</p>
+            <p id="valorRecall" class="text-2xl font-bold text-white font-mono">—</p>
+          </div>
+
+          <div class="bg-panel/70 border border-white/10 rounded-xl p-5">
+            <p class="text-xs text-slate-400 font-mono mb-1">F1-Score</p>
+            <p id="valorF1" class="text-2xl font-bold text-white font-mono">—</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Matriz de confusión -->
+      <section class="bg-panel/70 border border-white/10 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-sm font-mono uppercase tracking-widest text-oroclaro/80 mb-4">Matriz de confusión</h2>
+        <div id="graficoMatriz" class="w-full" style="min-height: 380px;"></div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 pb-10 pt-4">
+    <p class="text-xs text-slate-600 font-mono text-center">Ernesto Investing AI · Proyecto iDeSo · FISI-UNMSM</p>
+  </footer>
+
+<script>
+  // ------------------------------------------------------------------
+  // 1. Recuperamos la URL base de la API guardada por el portal index.html
+  // ------------------------------------------------------------------
+  const urlApi = sessionStorage.getItem('apiUrl');
+
+  const elEstadoUrlApi = document.getElementById('estadoUrlApi');
+  const elSelector = document.getElementById('selectorTicker');
+
+  if (urlApi) {
+    elEstadoUrlApi.textContent = urlApi;
+  } else {
+    // Si no existe la URL en sessionStorage, avisamos al usuario de inmediato
+    elEstadoUrlApi.textContent = 'No configurada';
+    mostrarError('No se encontró la URL de la API en sessionStorage. Vuelve al portal (index.html) e ingresa la URL de ngrok.');
+  }
+
+  // Referencias a los contenedores de estado
+  const zonaEstado = document.getElementById('zonaEstado');
+  const mensajeCargando = document.getElementById('mensajeCargando');
+  const mensajeError = document.getElementById('mensajeError');
+  const detalleError = document.getElementById('detalleError');
+  const contenidoPrincipal = document.getElementById('contenidoPrincipal');
+
+  // ------------------------------------------------------------------
+  // 2. Funciones auxiliares para alternar entre estados de la interfaz
+  // ------------------------------------------------------------------
+  function mostrarCargando() {
+    zonaEstado.classList.remove('hidden');
+    mensajeCargando.classList.remove('hidden');
+    mensajeCargando.classList.add('flex');
+    mensajeError.classList.add('hidden');
+    contenidoPrincipal.classList.add('hidden');
+  }
+
+  function mostrarError(mensaje) {
+    zonaEstado.classList.remove('hidden');
+    mensajeCargando.classList.add('hidden');
+    mensajeCargando.classList.remove('flex');
+    mensajeError.classList.remove('hidden');
+    detalleError.textContent = mensaje;
+    contenidoPrincipal.classList.add('hidden');
+  }
+
+  function mostrarContenido() {
+    zonaEstado.classList.add('hidden');
+    contenidoPrincipal.classList.remove('hidden');
+  }
+
+  // ------------------------------------------------------------------
+  // 3. Petición a la API con el header obligatorio de ngrok
+  // ------------------------------------------------------------------
+  async function cargarDatosSVC(ticker) {
+    if (!urlApi) return; // Ya se mostró el error correspondiente arriba
+
+    mostrarCargando();
+
+    try {
+      const respuesta = await fetch(`${urlApi}/api/svc/${ticker}`, {
+        method: 'GET',
+        headers: {
+          // Cabecera obligatoria para evitar la pantalla de advertencia de ngrok
+          'ngrok-skip-browser-warning': 'true',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!respuesta.ok) {
+        throw new Error(`El servidor respondió con estado ${respuesta.status}`);
+      }
+
+      const datos = await respuesta.json();
+      renderizarDatos(ticker, datos);
+      mostrarContenido();
+
+    } catch (error) {
+      console.error('Error al consultar la API del clasificador SVC:', error);
+      mostrarError(`${error.message}. Revisa que la API de ngrok esté activa y el ticker "${ticker}" tenga datos disponibles.`);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 4. Renderizado dinámico de la señal, métricas y matriz de confusión
+  // ------------------------------------------------------------------
+  function renderizarDatos(ticker, datos) {
+    document.getElementById('tickerActivo').textContent = ticker;
+
+    // --- Señal actual (BUY / SELL) ---
+    const prediccion = datos.prediccion || {};
+    const senal = (prediccion['señal'] || prediccion.senal || datos.senal || datos.signal || '').toString().toUpperCase();
+    const tarjetaSenal = document.getElementById('tarjetaSenal');
+    const textoSenal = document.getElementById('textoSenal');
+    const iconoSenal = document.getElementById('iconoSenal');
+
+    // Reseteamos clases previas de color en la tarjeta
+    tarjetaSenal.className = 'tarjeta-senal rounded-2xl p-8 border shadow-xl flex items-center justify-between flex-wrap gap-4';
+
+    if (senal === 'BUY') {
+      tarjetaSenal.classList.add('bg-emerald-900/40', 'border-emerald-500/40');
+      textoSenal.textContent = 'BUY';
+      textoSenal.classList.remove('text-red-300');
+      textoSenal.classList.add('text-emerald-300');
+      iconoSenal.textContent = '📈';
+      iconoSenal.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-emerald-500/20 text-3xl';
+    } else if (senal === 'SELL') {
+      tarjetaSenal.classList.add('bg-red-950/40', 'border-red-500/40');
+      textoSenal.textContent = 'SELL';
+      textoSenal.classList.remove('text-emerald-300');
+      textoSenal.classList.add('text-red-300');
+      iconoSenal.textContent = '📉';
+      iconoSenal.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-red-500/20 text-3xl';
+    } else {
+      tarjetaSenal.classList.add('bg-slate-800/40', 'border-white/10');
+      textoSenal.textContent = senal || 'SIN DATOS';
+      iconoSenal.textContent = '❔';
+    }
+
+    // --- Métricas de evaluación ---
+    const formatearPorcentaje = (valor) =>
+      (valor === undefined || valor === null) ? '—' : `${(valor * 100).toFixed(1)}%`;
+
+    // La API real anida las métricas dentro de "metricas"
+    const metricas = datos.metricas || {};
+    document.getElementById('valorAccuracy').textContent = formatearPorcentaje(metricas.accuracy ?? datos.accuracy);
+    document.getElementById('valorPrecision').textContent = formatearPorcentaje(metricas.precision ?? datos.precision);
+    document.getElementById('valorRecall').textContent = formatearPorcentaje(metricas.recall ?? datos.recall);
+    document.getElementById('valorF1').textContent = formatearPorcentaje(metricas.f1 ?? metricas.f1_score ?? datos.f1);
+
+    // --- Matriz de confusión con Plotly ---
+    // Se espera un arreglo 2x2: [[VN, FP], [FN, VP]]
+    const matriz = metricas.matriz_confusion || datos.matriz_confusion || datos.confusion_matrix || [[0, 0], [0, 0]];
+    dibujarMatrizConfusion(matriz);
+  }
+
+  function dibujarMatrizConfusion(matriz) {
+    const etiquetas = ['SELL', 'BUY'];
+
+    // Plotly dibuja los heatmaps de abajo hacia arriba, invertimos filas
+    // para que la fila superior sea la clase real "SELL" y luego "BUY"
+    const z = [...matriz].reverse();
+    const yInvertido = [...etiquetas].reverse();
+
+    const datosPlot = [{
+      z: z,
+      x: etiquetas,
+      y: yInvertido,
+      type: 'heatmap',
+      colorscale: [
+        [0, '#12203C'],
+        [1, '#C5961A']
+      ],
+      showscale: false,
+      texttemplate: '%{z}',
+      textfont: { size: 22, color: '#FFFFFF' },
+      hovertemplate: 'Real: %{y}<br>Predicho: %{x}<br>Casos: %{z}<extra></extra>'
+    }];
+
+    const layout = {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: '#CBD5E1', family: 'JetBrains Mono, monospace' },
+      margin: { t: 20, l: 70, r: 20, b: 50 },
+      xaxis: { title: 'Predicción del modelo', side: 'bottom' },
+      yaxis: { title: 'Clase real' }
+    };
+
+    Plotly.newPlot('graficoMatriz', datosPlot, layout, {
+      displayModeBar: false,
+      responsive: true
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // 5. Eventos: carga inicial y cambio de ticker
+  // ------------------------------------------------------------------
+  elSelector.addEventListener('change', (evento) => {
+    cargarDatosSVC(evento.target.value);
+  });
+
+  if (urlApi) {
+    cargarDatosSVC(elSelector.value);
+  }
+</script>
+
+</body>
+</html>
