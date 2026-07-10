@@ -1,581 +1,161 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Módulo NLP - Dashboard de Sentimiento Financiero</title>
-    <!-- Tailwind CSS para un diseño moderno y responsivo -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para las visualizaciones métricas -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- FontAwesome para los iconos de sentimiento -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-/* __INVESTAI_NAV_CSS__ */
-    body { display: block !important; align-items: unset !important; justify-content: unset !important; padding-top: 0 !important; }
-    .investai-navbar { background-color: #112244 !important; color: white !important; display: flex !important; align-items: center !important; padding: 0 10px !important; height: 50px !important; box-shadow: 0 2px 16px rgba(0,0,0,.18) !important; position: sticky !important; top: 0 !important; z-index: 9999 !important; box-sizing: border-box !important; width: 100% !important; overflow: hidden !important; flex-direction: column !important; justify-content: flex-start !important; padding-bottom: 0 !important; }
-    .investai-brand { display: flex !important; align-items: center !important; font-weight: bold !important; font-size: 14px !important; margin-right: 12px !important; color: white !important; text-decoration: none !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-    .investai-brand-icon { color: #ffcc00 !important; margin-right: 8px !important; font-weight: 900 !important; }
-    .investai-nav-row { display: flex !important; align-items: center !important; width: 100% !important; height: 40px !important; flex-shrink: 0 !important; }
-    .investai-nav-links { display: flex !important; gap: 3px !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important; height: 34px !important; align-items: center !important; flex: 1 1 0% !important; min-width: 0 !important; -webkit-overflow-scrolling: touch !important; cursor: grab !important;
-      scrollbar-width: thin !important;
-      scrollbar-color: rgba(255,255,255,0.35) transparent !important;
-    }
-    .investai-nav-links::-webkit-scrollbar { display: block !important; height: 3px !important; }
-    .investai-nav-links::-webkit-scrollbar-track { background: transparent !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35) !important; border-radius: 99px !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6) !important; }
-    .investai-nav-links a { color: rgba(255, 255, 255, 0.65) !important; text-decoration: none !important; padding: 4px 7px !important; border-radius: 5px !important; font-size: 11px !important; font-weight: 500 !important; transition: background 0.2s ease, color 0.2s ease !important; flex-shrink: 0 !important; cursor: pointer !important; display: inline-block !important; }
-    .investai-nav-links a:hover { color: white !important; background-color: rgba(255, 255, 255, 0.10) !important; }
-    .investai-nav-links a.active-tab { background-color: #ffcc00 !important; color: #112244 !important; font-weight: 700 !important; }
-/* __INVESTAI_NAV_CSS__ */
-</style>
-</head>
-<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
-<nav class="investai-navbar">
-    <a href="index.html" class="investai-brand">
-        <span class="investai-brand-icon">|||</span> InvestAI
-    </a>
-    <div class="investai-nav-links">
-        <a href="modulo6.1-autenticacion.html" id="nav-m1" data-mod="m1" onclick="navigateModule('m1', event)">Autenticación (M1)</a>
-        <a href="modulo_mercado.html" id="nav-m2" data-mod="m2" onclick="navigateModule('m2', event)">Ingesta de Datos (M2)</a>
-        <a href="modulo_svc.html" id="nav-m3" data-mod="m3" onclick="navigateModule('m3', event)">Predicciones SVC (M3)</a>
-        <a href="modulo6.4-lstm.html" id="nav-m4" data-mod="m4" onclick="navigateModule('m4', event)">Pronósticos LSTM (M4)</a>
-        <a href="modulo6.5-nlp-operaciones.html" id="nav-m5" data-mod="m5" onclick="navigateModule('m5', event)" class="active-tab">Análisis NLP (M5)</a>
-        <a href="modulo6.6-core-predictivo-central.html" id="nav-m6" data-mod="m6" onclick="navigateModule('m6', event)">Core Predictivo (M6)</a>
-        <a href="modulo6.7-estrategias.html" id="nav-m7" data-mod="m7" onclick="navigateModule('m7', event)">Estrategias (M7)</a>
-        <a href="modulo6.8-ordenes.html" id="nav-m8" data-mod="m8" onclick="navigateModule('m8', event)">Órdenes (M8)</a>
-        <a href="modulo6.9-portafolio.html" id="nav-m9" data-mod="m9" onclick="navigateModule('m9', event)">Portafolios (M9)</a>
-        <a href="modulo6.10-consola.html" id="nav-m10" data-mod="m10" onclick="navigateModule('m10', event)">Consola (M10)</a>
-        <a href="modulo6.11-backtesting.html" id="nav-m11" data-mod="m11" onclick="navigateModule('m11', event)">Backtesting (M11)</a>
-    </div>
-</nav>
-
-    <!-- Contenedor Principal -->
-    <div class="container mx-auto px-4 py-6">
-        
-        <!-- Encabezado del Sistema -->
-        <header class="mb-8 border-b border-gray-800 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                    Sistema NLP: Sentimiento de Mercado
-                </h1>
-                <p class="text-gray-400 text-sm mt-1">
-                    Análisis combinado: <span class="text-blue-400 font-mono">VADER SentimentIntensityAnalyzer</span> + <span class="text-purple-400 font-mono">GPT-4o Complementary Classifier</span>
-                </p>
-            </div>
-            <div class="bg-gray-800 px-4 py-2 rounded-lg text-xs text-gray-400 border border-gray-700">
-                <span class="font-bold text-emerald-400">Umbral VADER:</span> Bullish &ge; 0.05 | Bearish &le; -0.05 | Neutral (otros)
-            </div>
-        </header>
-
-        <!-- Sección de Control de Filtros e Indicadores Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            
-            <!-- Panel de Filtros -->
-            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg flex flex-col justify-between">
-                <h2 class="text-lg font-semibold mb-4 text-gray-200 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-blue-400"></i> Filtros de Búsqueda
-                </h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-1">Ticker / Activo</label>
-                        <select id="tickerFilter" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
-                            <option value="ALL">Todos los activos</option>
-                            <!-- Se poblará dinámicamente -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-1">Fecha Desde</label>
-                        <input type="date" id="dateFrom" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-1">Fecha Hasta</label>
-                        <input type="date" id="dateTo" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
-                    </div>
-                </div>
-                <button onclick="resetFilters()" class="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 rounded-lg text-sm font-medium transition">
-                    Limpiar Filtros
-                </button>
-            </div>
-
-            <!-- Gráfico 1: Distribución del Sentimiento -->
-            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg">
-                <h2 class="text-lg font-semibold mb-2 text-gray-200 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-bar text-emerald-400"></i> Distribución de Sentimiento
-                </h2>
-                <div class="h-48 relative">
-                    <canvas id="distributionChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Gráfico 2: Velocímetro de Sentimiento Agregado -->
-            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-lg flex flex-col justify-between">
-                <h2 class="text-lg font-semibold mb-2 text-gray-200 flex items-center gap-2">
-                    <i class="fa-solid fa-gauge-high text-purple-400"></i> Sentimiento Agregado del Mercado
-                </h2>
-                <div class="h-36 relative flex justify-center items-center">
-                    <canvas id="gaugeChart"></canvas>
-                    <div class="absolute text-center mt-12">
-                        <span id="gaugeValue" class="text-2xl font-black block text-white">0</span>
-                        <span id="gaugeLabel" class="text-xs uppercase font-bold tracking-wider">NEUTRAL</span>
-                    </div>
-                </div>
-                <p class="text-center text-xs text-gray-400 mt-2">Índice basado en el promedio ponderado de VADER Compound (-1 a +1)</p>
-            </div>
-
-        </div>
-
-        <!-- Feed de Noticias -->
-        <div>
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold flex items-center gap-2 text-gray-100">
-                    <i class="fa-solid fa-newspaper text-amber-400"></i> Feed de Noticias Procesadas 
-                    <span id="newsCount" class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full font-mono">15</span>
-                </h2>
-            </div>
-
-            <!-- Tarjetas de Noticias -->
-            <div id="newsFeed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Se inyecta vía JavaScript -->
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Lógica de Simulación, Renderizado y Analíticas -->
-    <script>
-        // 15 Noticias Financieras simuladas de forma realista en español con metadatos NLP
-        const newsData = [
-            {
-                id: 1,
-                ticker: "FSM",
-                titulo: "Fortuna Silver Mines reporta incremento del 18% en producción de plata del Q2 2026",
-                fuente: "Mining Weekly",
-                fecha: "2026-06-12",
-                resumen: "La minera canadiense superó las expectativas de producción en sus operaciones de San José (México) y Lindero (Argentina), impulsada por mayores leyes de mineral y eficiencia operativa.",
-                vader_compound: 0.76,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 2,
-                ticker: "BVN",
-                titulo: "Buenaventura enfrenta paralización temporal en mina Uchucchacua por conflicto social en Oyón",
-                fuente: "Gestión Perú",
-                fecha: "2026-06-12",
-                resumen: "Comunidades de la provincia de Oyón bloquearon el acceso a la unidad minera exigiendo mayores compromisos de empleo local. La empresa suspendió operaciones preventivamente y abrió mesa de diálogo.",
-                vader_compound: -0.61,
-                gpt4_sentiment: "BEARISH"
-            },
-            {
-                id: 3,
-                ticker: "BHP",
-                titulo: "BHP mantiene guidance de producción de cobre para el ejercicio fiscal 2026",
-                fuente: "Reuters Commodities",
-                fecha: "2026-06-11",
-                resumen: "El gigante australiano confirmó sus proyecciones anuales en cobre y mineral de hierro, destacando la estabilidad operativa de Escondida en Chile pese al contexto de precios moderados.",
-                vader_compound: 0.03,
-                gpt4_sentiment: "NEUTRAL"
-            },
-            {
-                id: 4,
-                ticker: "ABX.TO",
-                titulo: "Barrick Gold anuncia descubrimiento de nuevo yacimiento aurífero en zona norte de Perú",
-                fuente: "Northern Miner",
-                fecha: "2026-06-11",
-                resumen: "Los resultados de perforación en el proyecto Lagunas Norte extensión revelan zonas de alta ley con más de 3.2 g/t Au en 45 metros de intersección, elevando las perspectivas de recursos de la operación.",
-                vader_compound: 0.82,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 5,
-                ticker: "VOLCABC1.LM",
-                titulo: "Volcán Cía. Minera reduce deuda corporativa en 120 millones de dólares durante el primer semestre",
-                fuente: "Bolsa de Valores de Lima",
-                fecha: "2026-06-10",
-                resumen: "La empresa minera peruana ejecutó un prepago anticipado de obligaciones financieras gracias a los sólidos flujos de caja generados por sus operaciones de zinc y plata en Cerro de Pasco.",
-                vader_compound: 0.65,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 6,
-                ticker: "BVN",
-                titulo: "Caída del precio internacional de la plata presiona márgenes operativos de Buenaventura",
-                fuente: "El Comercio Perú",
-                fecha: "2026-06-10",
-                resumen: "La cotización de la plata retrocedió un 8% en el mercado spot, afectando directamente los ingresos de la minera peruana cuya producción depende en un 40% de este metal precioso.",
-                vader_compound: -0.44,
-                gpt4_sentiment: "BEARISH"
-            },
-            {
-                id: 7,
-                ticker: "FSM",
-                titulo: "Fortuna Silver inicia construcción de nueva planta de procesamiento en mina Séguéla, Costa de Marfil",
-                fuente: "Kitco News",
-                fecha: "2026-06-09",
-                resumen: "La expansión de la planta elevará la capacidad de tratamiento de mineral de 3,000 a 4,500 toneladas diarias, con una inversión de 85 millones de dólares y puesta en marcha prevista para el Q1 2027.",
-                vader_compound: 0.58,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 8,
-                ticker: "BHP",
-                titulo: "BHP Group reporta sólidos resultados anuales impulsados por demanda china de mineral de hierro",
-                fuente: "Financial Times",
-                fecha: "2026-06-09",
-                resumen: "La recuperación de la actividad siderúrgica en China impulsó los volúmenes de exportación de mineral de hierro desde Australia, permitiendo a BHP superar las estimaciones de EBITDA del consenso.",
-                vader_compound: 0.71,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 9,
-                ticker: "ABX.TO",
-                titulo: "Barrick Gold mantiene postura cautelosa ante incertidumbre en política minera de Tanzania",
-                fuente: "Bloomberg Commodities",
-                fecha: "2026-06-08",
-                resumen: "El gobierno tanzano evalúa modificar los términos de royalties para operaciones auríferas, generando incertidumbre regulatoria en el proyecto North Mara donde Barrick mantiene participación mayoritaria.",
-                vader_compound: -0.02,
-                gpt4_sentiment: "NEUTRAL"
-            },
-            {
-                id: 10,
-                ticker: "VOLCABC1.LM",
-                titulo: "Conflicto hídrico en Junín amenaza continuidad operativa de unidades de Volcán Cía. Minera",
-                fuente: "Actualidad Minera del Perú",
-                fecha: "2026-06-08",
-                resumen: "Autoridades regionales de Junín restringieron temporalmente el uso de agua superficial para actividades industriales, afectando el calendario de producción de zinc en la unidad Animón.",
-                vader_compound: -0.55,
-                gpt4_sentiment: "BEARISH"
-            },
-            {
-                id: 11,
-                ticker: "FSM",
-                titulo: "Analistas elevan precio objetivo de Fortuna Silver ante mejora en perspectivas del oro",
-                fuente: "Scotiabank Equity Research",
-                fecha: "2026-06-07",
-                resumen: "El banco canadiense revisó al alza su valoración de FSM de CAD 7.50 a CAD 9.20 por acción, citando el aumento sostenido del precio del oro y la diversificación geográfica de sus activos.",
-                vader_compound: 0.69,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 12,
-                ticker: "BVN",
-                titulo: "Buenaventura obtiene certificación ambiental para expansión de tajo Tambomayo en Arequipa",
-                fuente: "Ministerio de Energía y Minas",
-                fecha: "2026-06-07",
-                resumen: "El MINEM aprobó el EIA-sd que permitirá extender la vida útil de la mina Tambomayo hasta 2031, ampliando el área de explotación en 340 hectáreas con compromisos de remediación progresiva.",
-                vader_compound: 0.48,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 13,
-                ticker: "BHP",
-                titulo: "BHP evalúa desinversión de activos de carbón térmico en Indonesia ante presión ESG",
-                fuente: "Reuters Asia",
-                fecha: "2026-06-06",
-                resumen: "La mayor minera del mundo estudia la venta de sus últimas participaciones en carbón térmico para cumplir sus compromisos de carbono neutro al 2050 y mejorar su calificación en índices ESG globales.",
-                vader_compound: -0.01,
-                gpt4_sentiment: "NEUTRAL"
-            },
-            {
-                id: 14,
-                ticker: "ABX.TO",
-                titulo: "Barrick Gold incrementa dividendo trimestral en 10 centavos ante fortaleza del precio del oro",
-                fuente: "Globe and Mail",
-                fecha: "2026-06-06",
-                resumen: "El directorio aprobó un dividendo de USD 0.10 por acción pagadero en septiembre, respaldado por el precio del oro por encima de los USD 2,300 la onza y una posición de caja neta positiva.",
-                vader_compound: 0.77,
-                gpt4_sentiment: "BULLISH"
-            },
-            {
-                id: 15,
-                ticker: "VOLCABC1.LM",
-                titulo: "Volcán Cía. Minera registra caída en volúmenes de producción de zinc por mantenimiento programado",
-                fuente: "Semana Económica",
-                fecha: "2026-06-05",
-                resumen: "La parada técnica semestral en la planta concentradora de Chungar redujo la producción de zinc en un 12% respecto al trimestre anterior. La empresa proyecta recuperación total en el Q3 2026.",
-                vader_compound: -0.28,
-                gpt4_sentiment: "BEARISH"
-            }
-        ];
-
-        // Instancias globales de gráficos para su posterior actualización/destrucción dinámica
-        let distributionChartInstance = null;
-        let gaugeChartInstance = null;
-
-        // Configuración inicial al cargar el DOM
-        document.addEventListener("DOMContentLoaded", () => {
-            populateTickerFilter();
-            initDateFilters();
-            filterAndRender();
-
-            // Escuchas de eventos para filtrado interactivo
-            document.getElementById("tickerFilter").addEventListener("change", filterAndRender);
-            document.getElementById("dateFrom").addEventListener("change", filterAndRender);
-            document.getElementById("dateTo").addEventListener("change", filterAndRender);
-        });
-
-        // Poblado dinámico del filtro de selectores (Tickers únicos)
-        function populateTickerFilter() {
-            const select = document.getElementById("tickerFilter");
-            const tickers = [...new Set(newsData.map(item => item.ticker))].sort();
-            tickers.forEach(ticker => {
-                const opt = document.createElement("option");
-                opt.value = ticker;
-                opt.textContent = ticker;
-                select.appendChild(opt);
-            });
-        }
-
-        // Asignación de rango inicial a los inputs de fecha basados en la data
-        function initDateFilters() {
-            const dates = newsData.map(item => new Date(item.fecha));
-            const minDate = new Date(Math.min(...dates)).toISOString().split('T')[0];
-            const maxDate = new Date(Math.max(...dates)).toISOString().split('T')[0];
-            
-            document.getElementById("dateFrom").value = minDate;
-            document.getElementById("dateTo").value = maxDate;
-        }
-
-        // Reseteo de controles de filtrado
-        function resetFilters() {
-            document.getElementById("tickerFilter").value = "ALL";
-            initDateFilters();
-            filterAndRender();
-        }
-
-        // Función Núcleo: Filtra datos según controles y actualiza UI + Gráficos
-        function filterAndRender() {
-            const selectedTicker = document.getElementById("tickerFilter").value;
-            const dateFrom = document.getElementById("dateFrom").value;
-            const dateTo = document.getElementById("dateTo").value;
-
-            // Filtrado lógico
-            const filteredData = newsData.filter(item => {
-                const matchTicker = (selectedTicker === "ALL" || item.ticker === selectedTicker);
-                const matchDate = (!dateFrom || item.fecha >= dateFrom) && (!dateTo || item.fecha <= dateTo);
-                return matchTicker && matchDate;
-            });
-
-            // Actualizar contador del Feed
-            document.getElementById("newsCount").textContent = filteredData.length;
-
-            // Renderizados
-            renderNewsCards(filteredData);
-            updateCharts(filteredData);
-        }
-
-        // Generador visual de las tarjetas del Feed de Noticias
-        function renderNewsCards(data) {
-            const container = document.getElementById("newsFeed");
-            container.innerHTML = ""; // Limpieza previa
-
-            if (data.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-12 text-center text-gray-500 bg-gray-800 rounded-xl border border-dashed border-gray-700">
-                        <i class="fa-solid fa-folder-open text-4xl mb-3"></i>
-                        <p>No se encontraron noticias bajo los criterios de filtrado seleccionados.</p>
-                    </div>`;
-                return;
-            }
-
-            data.forEach(news => {
-                // Definición visual de estilos según clasificación GPT-4o / VADER
-                let badgeColor, badgeBg, iconClass, borderColor;
-
-                if (news.gpt4_sentiment === "BULLISH") {
-                    badgeColor = "text-emerald-400";
-                    badgeBg = "bg-emerald-500/10";
-                    borderColor = "border-emerald-500/20";
-                    iconClass = "fa-solid fa-arrow-trend-up text-emerald-400";
-                } else if (news.gpt4_sentiment === "BEARISH") {
-                    badgeColor = "text-rose-400";
-                    badgeBg = "bg-rose-500/10";
-                    borderColor = "border-rose-500/20";
-                    iconClass = "fa-solid fa-arrow-trend-down text-rose-400";
-                } else {
-                    badgeColor = "text-gray-400";
-                    badgeBg = "bg-gray-500/10";
-                    borderColor = "border-gray-700";
-                    iconClass = "fa-solid fa-minus text-gray-400";
-                }
-
-                const cardHtml = `
-                    <div class="bg-gray-800 rounded-xl border ${borderColor} p-5 flex flex-col justify-between hover:shadow-2xl transition duration-200">
-                        <div>
-                            <!-- Fila Superior Meta -->
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded text-xs font-bold font-mono">
-                                    ${news.ticker}
-                                </span>
-                                <div class="text-xs text-gray-400 flex items-center gap-2">
-                                    <span>${news.fuente}</span>
-                                    <span>•</span>
-                                    <span>${news.fecha}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Título -->
-                            <h3 class="text-base font-bold text-gray-100 leading-snug mb-2 hover:text-blue-400 transition cursor-pointer">
-                                ${news.titulo}
-                            </h3>
-                            
-                            <!-- Resumen corporativo -->
-                            <p class="text-xs text-gray-400 line-clamp-3 mb-4">
-                                ${news.resumen}
-                            </p>
-                        </div>
-
-                        <!-- Panel Inferior de Métricas NLP -->
-                        <div class="pt-3 border-t border-gray-700/60 flex justify-between items-center mt-auto">
-                            <div class="flex flex-col">
-                                <span class="text-[10px] uppercase font-bold text-gray-500">VADER Compound</span>
-                                <span class="text-xs font-mono font-bold ${news.vader_compound >= 0.05 ? 'text-emerald-400' : news.vader_compound <= -0.05 ? 'text-rose-400' : 'text-gray-400'}">
-                                    ${news.vader_compound > 0 ? '+' : ''}${news.vader_compound.toFixed(2)}
-                                </span>
-                            </div>
-                            <div class="flex items-center gap-2 ${badgeBg} ${badgeColor} px-3 py-1 rounded-lg border border-current/10">
-                                <i class="${iconClass}"></i>
-                                <span class="text-xs font-bold font-mono">${news.gpt4_sentiment}</span>
-                            </div>
-                        </div>
-                    </div>`;
-                container.insertAdjacentHTML("beforeend", cardHtml);
-            });
-        }
-
-        // Orquestador de actualizaciones de gráficos analíticos
-        function updateCharts(filteredData) {
-            // 1. Conteo de categorías para gráfico de distribución
-            let bullishCount = 0;
-            let neutralCount = 0;
-            let bearishCount = 0;
-            let totalCompound = 0;
-
-            filteredData.forEach(item => {
-                totalCompound += item.vader_compound;
-                if (item.gpt4_sentiment === "BULLISH") bullishCount++;
-                else if (item.gpt4_sentiment === "BEARISH") bearishCount++;
-                else neutralCount++;
-            });
-
-            const totalItems = filteredData.length || 1;
-            const avgCompound = totalCompound / totalItems; // Rango teórico de -1 a +1
-
-            // ---- GRÁFICO 1: BARRAS HORIZONTALES (DISTRIBUCIÓN) ----
-            if (distributionChartInstance) distributionChartInstance.destroy();
-            
-            const ctxBar = document.getElementById('distributionChart').getContext('2d');
-            distributionChartInstance = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: ['Bullish', 'Neutral', 'Bearish'],
-                    datasets: [{
-                        data: [bullishCount, neutralCount, bearishCount],
-                        backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(107, 114, 128, 0.8)', 'rgba(244, 63, 94, 0.8)'],
-                        borderColor: ['#10b981', '#6b7280', '#f43f5e'],
-                        borderWidth: 1,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { color: '#374151' }, ticks: { color: '#9ca3af', precision: 0 } },
-                        y: { grid: { display: false }, ticks: { color: '#9ca3af' } }
-                    }
-                }
-            });
-
-            // ---- GRÁFICO 2: GAUGE VELOCÍMETRO (SENTIMIENTO AGREGADO) ----
-            // Transformar rango analítico VADER (-1 a 1) a escala clásica de mercado (0 a 100)
-            const scaledGaugeValue = Math.round(((avgCompound + 1) / 2) * 100);
-            
-            // Determinar etiquetas cualitativas del indicador agregado
-            let aggregateLabel = "NEUTRAL";
-            let labelColor = "#9ca3af";
-            if (avgCompound >= 0.15) { aggregateLabel = "ALCISTA (GREED)"; labelColor = "#10b981"; }
-            else if (avgCompound <= -0.15) { aggregateLabel = "BAJISTA (FEAR)"; labelColor = "#f43f5e"; }
-
-            document.getElementById("gaugeValue").textContent = filteredData.length ? scaledGaugeValue : "-";
-            document.getElementById("gaugeLabel").textContent = filteredData.length ? aggregateLabel : "SIN DATOS";
-            document.getElementById("gaugeLabel").style.color = labelColor;
-
-            if (gaugeChartInstance) gaugeChartInstance.destroy();
-
-            const ctxGauge = document.getElementById('gaugeChart').getContext('2d');
-            gaugeChartInstance = new Chart(ctxGauge, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: filteredData.length ? [scaledGaugeValue, 100 - scaledGaugeValue] : [0, 100],
-                        backgroundColor: [labelColor, '#374151'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    rotation: 270, // Inicio del semicírculo inferior izquierdo
-                    circumference: 180, // Generar arco de 180 grados
-                    cutout: '80%', // Efecto de anillo delgado para el tacómetro
-                    plugins: { tooltip: { enabled: false } }
-                }
-            });
-        }
-    
-/* __INVESTAI_NAV_JS__ */
-    (function(){
-      const slider = document.querySelector('.investai-nav-links');
-      if(slider){
-        let isDown=false, startX, scrollLeft, moved=false;
-        slider.addEventListener('mousedown', e=>{ isDown=true; moved=false; startX=e.pageX-slider.offsetLeft; scrollLeft=slider.scrollLeft; slider.style.cursor='grabbing'; });
-        slider.addEventListener('mouseleave', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mouseup', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mousemove', e=>{ if(!isDown) return; e.preventDefault(); moved=true; const x=e.pageX-slider.offsetLeft; slider.scrollLeft=scrollLeft-(x-startX)*1.5; });
-        slider.addEventListener('click', e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernesto Investing AI · Análisis NLP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    (function verificarSesion() {
+      const usuarioActivo = localStorage.getItem('investai_user');
+      if (!usuarioActivo) {
+        alert("🔒 Acceso denegado. Por favor, inicia sesión para acceder al sistema InvestAI.");
+        window.location.replace("modulo6.1-autenticacion.html");
       }
-      if(typeof window.navigateModule!=='undefined') return;
-      const cfg={
-        m1:{title:"Autenticación (M1)",desc:"Gestión de seguridad, tokens JWT y control de acceso MFA.",icon:"🔐"},
-        m2:{title:"Ingesta de Datos (M2)",desc:"Pipelines de captura y streaming desde APIs financieras.",icon:"📥"},
-        m3:{title:"Clasificación (M3)",desc:"Etiquetado de patrones de mercado mediante algoritmos supervisados.",icon:"🏷️"},
-        m4:{title:"Regresión (M4)",desc:"Modelos para estimación de precios objetivos.",icon:"📊"},
-        m5:{title:"Análisis NLP (M5)",desc:"Procesamiento de Lenguaje Natural sobre noticias financieras.",icon:"💬"},
-        m6:{title:"Core Predictivo (M6)",desc:"Núcleo central de IA que coordina todos los módulos.",icon:"🧠"},
-        m7:{title:"Estrategias (M7)",desc:"Generación algorítmica de reglas operativas.",icon:"💡"},
-        m8:{title:"Órdenes (M8)",desc:"Enrutador inteligente con control estricto de Slippage.",icon:"⚡"},
-        m9:{title:"Portafolios (M9)",desc:"Rebalanceo automático mediante optimización de varianza media.",icon:"💼"},
-        m10:{title:"Consola (M10)",desc:"Panel de administración para control de umbrales operativos.",icon:"🖥️"},
-        m11:{title:"Backtesting (M11)",desc:"Simulador sobre series históricas con métricas Sharpe y Sortino.",icon:"⏳"}
-      };
-      window.navigateModule=function(id,e){
-        const link=document.getElementById('nav-'+id); if(!link) return;
-        const url=link.getAttribute('href');
-        if(!url||url==='#'){e.preventDefault();window.showPlaceholderView(id);return;}
-        e.preventDefault();
-        fetch(url,{method:'HEAD'}).then(r=>r.ok?window.location.href=url:window.showPlaceholderView(id)).catch(()=>window.location.href=url);
-      };
-      window.showPlaceholderView=function(id){
-        const c=cfg[id]; if(!c) return;
-        document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active-view'));
-        const ph=document.getElementById('view-placeholder');
-        if(ph){
-          const keys=['placeholder-title','placeholder-panel-title','placeholder-desc','placeholder-icon'];
-          const vals=[c.title,c.title+' en Desarrollo',c.desc,c.icon];
-          keys.forEach((k,i)=>{ const el=document.getElementById(k); if(el) el.innerText=vals[i]; });
-          ph.classList.add('active-view');
-        }
-        document.querySelectorAll('.investai-nav-links a').forEach(a=>a.classList.remove('active-tab'));
-        const al=document.getElementById('nav-'+id); if(al) al.classList.add('active-tab');
-      };
-      window.resetToCore=function(){window.location.href='modulo6.6-core-predictivo-central.html';};
     })();
-/* __INVESTAI_NAV_JS__ */
+  tailwind.config = { theme: { extend: { colors: { azulinst: '#1F3864', azulinst2: '#16294C', oro: '#C5961A', oroclaro: '#E4B94E', verdeok: '#3C8C5B', rojoalerta: '#B23B3B' }, fontFamily: { display: ['Georgia', 'Cambria', 'serif'], mono: ['Consolas', 'Menlo', 'monospace'] } } } }
+</script>
+<style>body { background-color: #10182B; }</style>
+</head>
+<body class="min-h-screen text-slate-100 font-sans">
+
+  <nav class="flex flex-wrap items-center justify-between gap-3 px-6 md:px-10 py-5 border-b border-azulinst/60">
+    <a href="index.html" class="font-mono text-xs text-slate-400 hover:text-oroclaro transition">← Volver al portal</a>
+    <div class="font-mono text-xs tracking-widest uppercase text-slate-400">Ernesto <span class="text-oroclaro font-semibold">Investing AI</span></div>
+    <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+      <span id="statusDot" class="w-2 h-2 rounded-full bg-verdeok"></span>
+      <span id="statusText">API conectada</span>
+    </div>
+  </nav>
+
+  <header class="px-6 md:px-10 pt-9 pb-6">
+    <h1 class="font-display font-bold text-3xl md:text-4xl">Sentimiento de Mercado NLP</h1>
+    <p class="mt-2 text-slate-300 text-sm max-w-2xl">Procesamiento de Lenguaje Natural combinado: VADER SentimentIntensityAnalyzer + GPT-4o Complementary Classifier.</p>
+  </header>
+
+  <main class="px-6 md:px-10 pb-16">
+    <!-- Panel de Filtros y Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+      
+      <!-- Filtros -->
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5 flex flex-col justify-between">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Filtros de Búsqueda</h2>
+        <div class="space-y-4 font-mono text-sm">
+          <div>
+            <label class="block text-slate-400 mb-1">Ticker / Activo</label>
+            <select id="tickerFilter" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100 focus:outline-none focus:border-oro">
+              <option value="ALL">Todos los activos</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Desde</label>
+            <input type="date" id="dateFrom" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100 focus:outline-none focus:border-oro">
+          </div>
+        </div>
+        <button onclick="filterAndRender()" class="mt-4 w-full bg-azulinst border border-azulinst hover:border-oro text-slate-200 py-2 rounded transition">Aplicar Filtros</button>
+      </div>
+
+      <!-- Gráfico Distribución -->
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Distribución</h2>
+        <div class="h-40 relative"><canvas id="distChart"></canvas></div>
+      </div>
+
+      <!-- Velocímetro -->
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5 flex flex-col items-center">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4 self-start">Sentimiento Global</h2>
+        <div class="h-32 w-full relative flex justify-center items-center">
+          <canvas id="gaugeChart"></canvas>
+          <div class="absolute text-center mt-10">
+            <span id="gaugeLabel" class="text-xs uppercase font-bold tracking-wider font-mono text-slate-400">NEUTRAL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed -->
+    <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Feed de Noticias <span id="newsCount" class="text-oroclaro ml-2"></span></h2>
+    <div id="newsFeed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+  </main>
+
+  <script>
+    // Datos simulados (mismos del archivo original)
+    const newsData = [
+      { ticker: "FSM", titulo: "Fortuna Silver Mines reporta incremento del 18%", fuente: "Mining Weekly", fecha: "2026-06-12", resumen: "La minera superó las expectativas...", vader_compound: 0.76, gpt4_sentiment: "BULLISH" },
+      { ticker: "BVN", titulo: "Buenaventura enfrenta paralización en mina", fuente: "Gestión Perú", fecha: "2026-06-12", resumen: "Comunidades bloquearon el acceso...", vader_compound: -0.61, gpt4_sentiment: "BEARISH" },
+      { ticker: "BHP", titulo: "BHP mantiene guidance de producción", fuente: "Reuters", fecha: "2026-06-11", resumen: "El gigante australiano confirmó...", vader_compound: 0.03, gpt4_sentiment: "NEUTRAL" },
+      { ticker: "ABX.TO", titulo: "Barrick Gold anuncia nuevo yacimiento", fuente: "Northern Miner", fecha: "2026-06-11", resumen: "Resultados de perforación...", vader_compound: 0.82, gpt4_sentiment: "BULLISH" },
+      { ticker: "VOLCABC1.LM", titulo: "Volcán reduce deuda corporativa", fuente: "Bolsa de Valores", fecha: "2026-06-10", resumen: "Prepago anticipado de obligaciones...", vader_compound: 0.65, gpt4_sentiment: "BULLISH" }
+    ];
+
+    let distChart, gaugeChart;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const select = document.getElementById("tickerFilter");
+      [...new Set(newsData.map(i => i.ticker))].forEach(t => select.innerHTML += `<option value="${t}">${t}</option>`);
+      document.getElementById("dateFrom").value = "2026-06-01";
+      filterAndRender();
+    });
+
+    function filterAndRender() {
+      const tFilter = document.getElementById("tickerFilter").value;
+      const data = newsData.filter(i => tFilter === "ALL" || i.ticker === tFilter);
+      
+      document.getElementById("newsCount").textContent = `(${data.length})`;
+      
+      const feed = document.getElementById("newsFeed");
+      feed.innerHTML = data.map(news => {
+        const isBull = news.gpt4_sentiment === "BULLISH";
+        const isBear = news.gpt4_sentiment === "BEARISH";
+        const color = isBull ? 'text-verdeok border-verdeok/30' : (isBear ? 'text-rojoalerta border-rojoalerta/30' : 'text-slate-400 border-slate-600');
+        
+        return `<div class="bg-azulinst2 border border-azulinst rounded-md p-5 hover:border-oro transition flex flex-col">
+          <div class="flex justify-between items-center mb-2 font-mono text-xs">
+            <span class="bg-azulinst px-2 py-1 rounded text-oroclaro font-bold">${news.ticker}</span>
+            <span class="text-slate-500">${news.fecha}</span>
+          </div>
+          <h3 class="font-bold text-slate-200 mb-2">${news.titulo}</h3>
+          <p class="text-sm text-slate-400 mb-4 flex-1">${news.resumen}</p>
+          <div class="pt-3 border-t border-azulinst flex justify-between font-mono text-xs items-center">
+            <span class="text-slate-500">VADER: <span class="${color.split(' ')[0]} font-bold">${news.vader_compound}</span></span>
+            <span class="border px-2 py-1 rounded ${color}">${news.gpt4_sentiment}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      updateCharts(data);
+    }
+
+    function updateCharts(data) {
+      const counts = [
+        data.filter(i => i.gpt4_sentiment === "BULLISH").length,
+        data.filter(i => i.gpt4_sentiment === "NEUTRAL").length,
+        data.filter(i => i.gpt4_sentiment === "BEARISH").length
+      ];
+
+      if(distChart) distChart.destroy();
+      distChart = new Chart(document.getElementById('distChart'), {
+        type: 'bar',
+        data: { labels: ['Bull', 'Neu', 'Bear'], datasets: [{ data: counts, backgroundColor: ['#3C8C5B', '#64748b', '#B23B3B'] }] },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#1F3864' }, ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } }, maintainAspectRatio: false }
+      });
+
+      const avg = data.reduce((acc, i) => acc + i.vader_compound, 0) / (data.length || 1);
+      const val = Math.round(((avg + 1) / 2) * 100);
+      let lbl = "NEUTRAL", col = "#94a3b8";
+      if(avg >= 0.15) { lbl = "ALCISTA"; col = "#3C8C5B"; } else if(avg <= -0.15) { lbl = "BAJISTA"; col = "#B23B3B"; }
+      
+      document.getElementById('gaugeLabel').textContent = lbl;
+      document.getElementById('gaugeLabel').style.color = col;
+
+      if(gaugeChart) gaugeChart.destroy();
+      gaugeChart = new Chart(document.getElementById('gaugeChart'), {
+        type: 'doughnut',
+        data: { datasets: [{ data: [val, 100-val], backgroundColor: [col, '#1F3864'], borderWidth: 0 }] },
+        options: { rotation: 270, circumference: 180, cutout: '80%', maintainAspectRatio: false, plugins: { tooltip: { enabled: false } } }
+      });
+    }
   </script>
-  <script src="investai-api-integration.js"></script>
 </body>
 </html>

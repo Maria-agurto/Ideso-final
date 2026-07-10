@@ -1,1068 +1,173 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestAI — Módulo 8 · Órdenes</title>
-  <style>
-/* __INVESTAI_NAV_CSS__ */
-    body { display: block !important; align-items: unset !important; justify-content: unset !important; padding-top: 0 !important; }
-    .investai-navbar { background-color: #112244 !important; color: white !important; display: flex !important; align-items: center !important; padding: 0 10px !important; height: 50px !important; box-shadow: 0 2px 16px rgba(0,0,0,.18) !important; position: sticky !important; top: 0 !important; z-index: 9999 !important; box-sizing: border-box !important; width: 100% !important; overflow: hidden !important; flex-direction: column !important; justify-content: flex-start !important; padding-bottom: 0 !important; }
-    .investai-brand { display: flex !important; align-items: center !important; font-weight: bold !important; font-size: 14px !important; margin-right: 12px !important; color: white !important; text-decoration: none !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-    .investai-brand-icon { color: #ffcc00 !important; margin-right: 8px !important; font-weight: 900 !important; }
-    .investai-nav-row { display: flex !important; align-items: center !important; width: 100% !important; height: 40px !important; flex-shrink: 0 !important; }
-    .investai-nav-links { display: flex !important; gap: 3px !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important; height: 34px !important; align-items: center !important; flex: 1 1 0% !important; min-width: 0 !important; -webkit-overflow-scrolling: touch !important; cursor: grab !important;
-      scrollbar-width: thin !important;
-      scrollbar-color: rgba(255,255,255,0.35) transparent !important;
-    }
-    .investai-nav-links::-webkit-scrollbar { display: block !important; height: 3px !important; }
-    .investai-nav-links::-webkit-scrollbar-track { background: transparent !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35) !important; border-radius: 99px !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6) !important; }
-    .investai-nav-links a { color: rgba(255, 255, 255, 0.65) !important; text-decoration: none !important; padding: 4px 7px !important; border-radius: 5px !important; font-size: 11px !important; font-weight: 500 !important; transition: background 0.2s ease, color 0.2s ease !important; flex-shrink: 0 !important; cursor: pointer !important; display: inline-block !important; }
-    .investai-nav-links a:hover { color: white !important; background-color: rgba(255, 255, 255, 0.10) !important; }
-    .investai-nav-links a.active-tab { background-color: #ffcc00 !important; color: #112244 !important; font-weight: 700 !important; }
-/* __INVESTAI_NAV_CSS__ */
-
-    /* ============================================================
-       VARIABLES Y RESET GLOBAL
-       Paleta corporativa InvestAI + tokens tipográficos
-    ============================================================ */
-    :root {
-      --bg-app:        #F0F2F5;
-      --bg-card:       #FFFFFF;
-      --color-primary: #1F3864;
-      --color-accent:  #C5961A;
-      --color-buy:     #16A34A;
-      --color-sell:    #DC2626;
-      --color-muted:   #64748B;
-      --color-border:  #E2E8F0;
-      --color-text:    #0F172A;
-      --color-subtext: #475569;
-
-      /* Estados de orden */
-      --pill-pending:  #F59E0B;
-      --pill-filled:   #16A34A;
-      --pill-cancelled:#DC2626;
-      --pill-sending:  #3B82F6;
-
-      /* Banner simulación */
-      --banner-bg:     #7C3AED;
-      --banner-text:   #FFFFFF;
-
-      /* Sombras */
-      --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.10);
-      --shadow-lg: 0 20px 40px rgba(0,0,0,.18);
-
-      --radius:   10px;
-      --radius-sm: 6px;
-      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      --font-mono: 'Cascadia Code', 'Fira Mono', 'Consolas', monospace;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: var(--font);
-      background: var(--bg-app);
-      color: var(--color-text);
-      min-height: 100vh;
-      font-size: 14px;
-      line-height: 1.5;
-      padding-top: 100px; /* Espacio para compensar Navbar y Banner fijos */
-    }
-
-    /* Contenedor Fijo Superior para mantener Banner y Navbar estables */
-    .header-fixed-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,.15);
-    }
-
-    /* ============================================================
-       BANNER SUPERIOR — MODO PAPER TRADING
-    ============================================================ */
-    .banner-simulation {
-      background: var(--banner-bg);
-      color: var(--banner-text);
-      text-align: center;
-      padding: 8px 16px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: .4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .banner-simulation .banner-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #A78BFA;
-      animation: pulse-dot 1.6s ease-in-out infinite;
-      flex-shrink: 0;
-    }
-    @keyframes pulse-dot {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: .4; transform: scale(.7); }
-    }
-
-    /* ============================================================
-       BARRA DE NAVEGACIÓN SUPERIOR (CORPORATIVA FIJA)
-    ============================================================ */
-    .navbar {
-      background: var(--color-primary);
-      padding: 0 24px;
-      display: flex;
-      align-items: center;
-      height: 56px;
-      overflow-x: auto;
-    }
-    .navbar-brand {
-      font-size: 17px;
-      font-weight: 700;
-      color: #FFFFFF;
-      letter-spacing: -.3px;
-      white-space: nowrap;
-      margin-right: 28px;
-    }
-    .navbar-brand span { color: var(--color-accent); }
-    
-    .nav-links {
-      display: flex;
-      align-items: stretch;
-      gap: 0;
-      height: 100%;
-      list-style: none;
-    }
-    .nav-links li {
-      display: flex;
-      align-items: center;
-    }
-    .nav-links li a {
-      display: flex;
-      align-items: center;
-      padding: 0 13px;
-      height: 100%;
-      color: rgba(255,255,255,.70);
-      text-decoration: none;
-      font-size: 12.5px;
-      font-weight: 500;
-      white-space: nowrap;
-      border-bottom: 3px solid transparent;
-      transition: all .15s ease;
-    }
-    .nav-links li a:hover { 
-      color: #FFFFFF; 
-      background: rgba(255,255,255,0.05);
-    }
-    
-    /* Ítem activo del módulo actual (Fondo azul oscuro / texto dorado) */
-    .nav-links li.active a {
-      color: var(--color-accent);
-      background: rgba(0, 0, 0, 0.2);
-      border-bottom-color: var(--color-accent);
-      font-weight: 700;
-    }
-
-    /* ============================================================
-       CABECERA DEL MÓDULO
-    ============================================================ */
-    .module-header {
-      padding: 24px 24px 0;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    .module-header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--color-primary);
-    }
-    .module-header p {
-      font-size: 12.5px;
-      color: var(--color-muted);
-      margin-top: 2px;
-    }
-    .module-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .4px;
-      text-transform: uppercase;
-    }
-    .badge-paper  { background: #EDE9FE; color: #7C3AED; }
-    .badge-tws    { background: #DBEAFE; color: #1D4ED8; }
-
-    /* ============================================================
-       LAYOUT PRINCIPAL — GRID DE DOS COLUMNAS
-    ============================================================ */
-    .main-layout {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 20px;
-      padding: 20px 24px 40px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    @media (max-width: 950px) {
-      .main-layout { grid-template-columns: 1fr; }
-    }
-
-    /* ============================================================
-       TARJETA GENÉRICA
-    ============================================================ */
-    .card {
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--color-border);
-      overflow: hidden;
-    }
-    .card-header {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .card-header h2 {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--color-primary);
-      text-transform: uppercase;
-      letter-spacing: .6px;
-    }
-    .card-header .card-icon {
-      width: 26px; height: 26px;
-      border-radius: var(--radius-sm);
-      background: #EFF6FF;
-      display: grid;
-      place-items: center;
-      font-size: 13px;
-      flex-shrink: 0;
-    }
-    .card-body { padding: 18px; }
-
-    /* ============================================================
-       SECCIÓN 1: DIRECCIÓN DE ORDEN — BOTONES BUY / SELL
-    ============================================================ */
-    .direction-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .btn-direction {
-      width: 100%;
-      padding: 16px 12px;
-      border: 2px solid transparent;
-      border-radius: var(--radius);
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: .5px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      transition: transform .12s, box-shadow .12s, opacity .15s;
-      outline: none;
-    }
-    .btn-direction:active { transform: scale(.97); }
-    .btn-direction .dir-label { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; opacity: .75; }
-
-    .btn-buy {
-      background: #DCFCE7;
-      color: var(--color-buy);
-      border-color: #BBF7D0;
-    }
-    .btn-sell {
-      background: #FEE2E2;
-      color: var(--color-sell);
-      border-color: #FECACA;
-    }
-
-    .btn-buy.active {
-      background: var(--color-buy);
-      color: #FFFFFF;
-      border-color: #15803D;
-      box-shadow: 0 4px 16px rgba(22,163,74,.35);
-    }
-    .btn-sell.active {
-      background: var(--color-sell);
-      color: #FFFFFF;
-      border-color: #B91C1C;
-      box-shadow: 0 4px 16px rgba(220,38,38,.35);
-    }
-
-    /* ============================================================
-       SECCIÓN 2: FORMULARIO TWS API
-    ============================================================ */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-
-    .form-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--color-subtext);
-      text-transform: uppercase;
-      letter-spacing: .7px;
-    }
-    .form-control {
-      width: 100%;
-      padding: 9px 12px;
-      border: 1.5px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-family: var(--font);
-      color: var(--color-text);
-      background: #FAFBFD;
-      transition: border-color .15s, box-shadow .15s;
-      outline: none;
-    }
-    .form-control:focus {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(31,56,100,.10);
-      background: #fff;
-    }
-    select.form-control { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748B' d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 14px; padding-right: 30px; }
-
-    .price-field { transition: opacity .2s; }
-    .price-field.hidden { display: none; }
-
-    .form-divider {
-      grid-column: 1 / -1;
-      border: none;
-      border-top: 1px dashed var(--color-border);
-      margin: 4px 0;
-    }
-
-    .btn-submit {
-      width: 100%;
-      margin-top: 16px;
-      padding: 13px;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: .3px;
-      cursor: pointer;
-      transition: opacity .15s, transform .1s, box-shadow .15s;
-      outline: none;
-    }
-    .btn-submit:hover { opacity: .95; }
-    .btn-submit:active { transform: scale(.98); }
-    .btn-submit.buy-mode  { background: var(--color-buy);  color: #fff; box-shadow: 0 4px 14px rgba(22,163,74,.30); }
-    .btn-submit.sell-mode { background: var(--color-sell); color: #fff; box-shadow: 0 4px 14px rgba(220,38,38,.30); }
-
-    /* ============================================================
-       SECCIÓN 3: TARJETA DE COSTOS
-    ============================================================ */
-    .cost-list { display: flex; flex-direction: column; gap: 0; }
-    .cost-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--color-border);
-      font-size: 13px;
-    }
-    .cost-row:last-child { border-bottom: none; }
-    .cost-row .cost-label { color: var(--color-subtext); }
-    .cost-row .cost-value {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      color: var(--color-text);
-    }
-    .cost-row.total .cost-label { font-weight: 700; color: var(--color-primary); }
-    .cost-row.total .cost-value { font-size: 16px; color: var(--color-primary); }
-    .cost-row.impact .cost-value { color: var(--color-accent); }
-
-    .price-ticker-info {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: #F8FAFC;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--color-border);
-      margin-bottom: 14px;
-      font-size: 12px;
-    }
-    .price-ticker-info .ticker-sym {
-      font-weight: 800;
-      font-family: var(--font-mono);
-      color: var(--color-primary);
-      font-size: 14px;
-    }
-    .price-ticker-info .ticker-price {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--color-buy);
-    }
-
-    .portfolio-hint {
-      font-size: 11px;
-      color: var(--color-muted);
-      text-align: center;
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--color-border);
-    }
-
-    /* ============================================================
-       SECCIÓN 4: TABLA DE HISTORIAL
-    ============================================================ */
-    .history-section {
-      grid-column: 1 / -1;
-      margin-top: 4px;
-    }
-    .table-wrapper { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12.5px;
-    }
-    thead tr { background: #F1F5F9; }
-    thead th {
-      padding: 10px 14px;
-      text-align: left;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-      color: var(--color-subtext);
-      white-space: nowrap;
-      border-bottom: 1.5px solid var(--color-border);
-    }
-    tbody tr {
-      border-bottom: 1px solid var(--color-border);
-      transition: background .1s;
-    }
-    tbody tr:hover { background: #F8FAFC; }
-    tbody td {
-      padding: 10px 14px;
-      color: var(--color-text);
-      white-space: nowrap;
-    }
-    td.td-id { font-family: var(--font-mono); color: var(--color-muted); font-size: 11px; }
-    td.td-ticker { font-family: var(--font-mono); font-weight: 700; }
-    td.td-price { font-family: var(--font-mono); }
-    td.td-type-buy { color: var(--color-buy); font-weight: 700; }
-    td.td-type-sell { color: var(--color-sell); font-weight: 700; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-    .pill::before {
-      content: '';
-      width: 5px; height: 5px;
-      border-radius: 50%;
-    }
-    .pill-filled { background: #DCFCE7; color: #14532D; }
-    .pill-filled::before { background: var(--pill-filled); }
-    .pill-sending { background: #DBEAFE; color: #1E3A8A; }
-    .pill-sending::before { background: var(--pill-sending); animation: pulse-dot 1s infinite; }
-
-    .empty-row td {
-      text-align: center;
-      padding: 32px;
-      color: var(--color-muted);
-    }
-
-    /* ============================================================
-       MODAL DE CONFIRMACIÓN
-    ============================================================ */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,.55);
-      backdrop-filter: blur(3px);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .2s;
-    }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal {
-      background: var(--bg-card);
-      border-radius: 14px;
-      box-shadow: var(--shadow-lg);
-      width: 100%;
-      max-width: 440px;
-      overflow: hidden;
-      transform: translateY(16px) scale(.97);
-      transition: transform .22s cubic-bezier(.34,1.56,.64,1);
-    }
-    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
-    
-    .modal-dir-band {
-      padding: 12px 14px;
-      font-size: 14px;
-      font-weight: 800;
-      text-align: center;
-      letter-spacing: .5px;
-    }
-    .modal-dir-band.buy  { background: var(--color-buy);  color: #fff; }
-    .modal-dir-band.sell { background: var(--color-sell); color: #fff; }
-
-    .modal-header {
-      padding: 18px 22px 14px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .modal-header h3 { font-size: 15px; font-weight: 800; color: var(--color-primary); }
-    .modal-header p { font-size: 12px; color: var(--color-muted); margin-top: 2px; }
-    .modal-close {
-      width: 28px; height: 28px;
-      border: none;
-      background: #F1F5F9;
-      border-radius: 50%;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      color: var(--color-muted);
-    }
-
-    .modal-body { padding: 20px 22px; }
-    .modal-summary {
-      background: #F8FAFC;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
-    .modal-summary-header {
-      padding: 10px 14px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--color-subtext);
-      border-bottom: 1px solid var(--color-border);
-    }
-    .modal-summary-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 14px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .modal-summary-row:last-child { border-bottom: none; }
-    .modal-summary-row .ms-label { color: var(--color-subtext); }
-    .modal-summary-row .ms-value { font-weight: 700; font-family: var(--font-mono); }
-    .modal-summary-row.ms-total .ms-value { color: var(--color-primary); font-size: 14px; }
-
-    .modal-warning {
-      display: flex;
-      gap: 8px;
-      padding: 10px 12px;
-      background: #FFFBEB;
-      border: 1px solid #FDE68A;
-      border-radius: var(--radius-sm);
-      font-size: 12px;
-      color: #92400E;
-      margin-bottom: 16px;
-    }
-
-    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .btn-cancel-modal {
-      padding: 11px;
-      border: 1.5px solid var(--color-border);
-      border-radius: var(--radius-sm);
-      background: #fff;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--color-subtext);
-      cursor: pointer;
-    }
-    .btn-confirm-modal {
-      padding: 11px;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 800;
-      color: #fff;
-      cursor: pointer;
-    }
-    .btn-confirm-modal.buy { background: var(--color-buy); }
-    .btn-confirm-modal.sell { background: var(--color-sell); }
-
-    .modal-sending { text-align: center; padding: 24px 20px; display: none; }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--color-border);
-      border-top-color: var(--color-primary);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin: 0 auto 12px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    @media (max-width: 600px) {
-      body { padding-top: 120px; }
-      .navbar { padding: 0 12px; }
-      .form-grid { grid-template-columns: 1fr; }
-      .modal-actions { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernesto Investing AI · Paper Trading</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  (function verificarSesion() {
+      const usuarioActivo = localStorage.getItem('investai_user');
+      if (!usuarioActivo) {
+        alert("🔒 Acceso denegado. Por favor, inicia sesión para acceder al sistema InvestAI.");
+        window.location.replace("modulo6.1-autenticacion.html");
+      }
+    })();
+  tailwind.config = { theme: { extend: { colors: { azulinst: '#1F3864', azulinst2: '#16294C', oro: '#C5961A', oroclaro: '#E4B94E', verdeok: '#3C8C5B', rojoalerta: '#B23B3B' }, fontFamily: { display: ['Georgia', 'Cambria', 'serif'], mono: ['Consolas', 'Menlo', 'monospace'] } } } }
+</script>
+<style>body { background-color: #10182B; }</style>
 </head>
-<body>
+<body class="min-h-screen text-slate-100 font-sans">
 
-  <div class="header-fixed-container">
-    <div class="banner-simulation" role="alert" aria-live="polite">
-      <span class="banner-dot"></span>
-      ⚠️&nbsp; Modo Paper Trading Activo — Conexión con TWS API simulada &nbsp;|&nbsp; Ninguna orden afecta fondos reales
-      <span class="banner-dot"></span>
-    </div>
-
-    <nav class="investai-navbar">
-    <a href="index.html" class="investai-brand">
-        <span class="investai-brand-icon">|||</span> InvestAI
-    </a>
-    <div class="investai-nav-links">
-        <a href="modulo6.1-autenticacion.html" id="nav-m1" data-mod="m1" onclick="navigateModule('m1', event)">Autenticación (M1)</a>
-        <a href="modulo_mercado.html" id="nav-m2" data-mod="m2" onclick="navigateModule('m2', event)">Ingesta de Datos (M2)</a>
-        <a href="modulo_svc.html" id="nav-m3" data-mod="m3" onclick="navigateModule('m3', event)">Predicciones SVC (M3)</a>
-        <a href="modulo6.4-lstm.html" id="nav-m4" data-mod="m4" onclick="navigateModule('m4', event)">Pronósticos LSTM (M4)</a>
-        <a href="modulo6.5-nlp-operaciones.html" id="nav-m5" data-mod="m5" onclick="navigateModule('m5', event)">Análisis NLP (M5)</a>
-        <a href="modulo6.6-core-predictivo-central.html" id="nav-m6" data-mod="m6" onclick="navigateModule('m6', event)">Core Predictivo (M6)</a>
-        <a href="modulo6.7-estrategias.html" id="nav-m7" data-mod="m7" onclick="navigateModule('m7', event)">Estrategias (M7)</a>
-        <a href="modulo6.8-ordenes.html" id="nav-m8" data-mod="m8" onclick="navigateModule('m8', event)" class="active-tab">Órdenes (M8)</a>
-        <a href="modulo6.9-portafolio.html" id="nav-m9" data-mod="m9" onclick="navigateModule('m9', event)">Portafolios (M9)</a>
-        <a href="modulo6.10-consola.html" id="nav-m10" data-mod="m10" onclick="navigateModule('m10', event)">Consola (M10)</a>
-        <a href="modulo6.11-backtesting.html" id="nav-m11" data-mod="m11" onclick="navigateModule('m11', event)">Backtesting (M11)</a>
-    </div>
-</nav>
+  <!-- Banner de Advertencia -->
+  <div class="bg-indigo-600 text-white text-center py-2 text-xs font-mono tracking-widest font-bold">
+    ⚠️ MODO PAPER TRADING — SIMULACIÓN FRONTEND
   </div>
 
-  <header class="module-header">
-    <h1>Módulo 8 — Transmisión y Ejecución de Órdenes (TWS API)</h1>
-    <p>Terminal operativa para ruteo, cotización y envío de señales en tiempo real hacia Interactive Brokers</p>
-    <div class="module-meta">
-      <span class="badge badge-paper">📋 Paper Trading</span>
-      <span class="badge badge-tws">🔗 TWS API Simulada</span>
+  <nav class="flex flex-wrap items-center justify-between gap-3 px-6 md:px-10 py-5 border-b border-azulinst/60">
+    <a href="index.html" class="font-mono text-xs text-slate-400 hover:text-oroclaro transition">← Volver al portal</a>
+    <div class="font-mono text-xs tracking-widest uppercase text-slate-400">Ernesto <span class="text-oroclaro font-semibold">Investing AI</span></div>
+    <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+      <span class="w-2 h-2 rounded-full bg-verdeok"></span>
+      <span>API conectada</span>
     </div>
+  </nav>
+
+  <header class="px-6 md:px-10 pt-9 pb-6">
+    <h1 class="font-display font-bold text-3xl md:text-4xl">Terminal de Órdenes</h1>
+    <p class="mt-2 text-slate-300 text-sm max-w-2xl">Simulación de enrutador hacia Interactive Brokers (TWS API). No afecta fondos reales.</p>
   </header>
 
-  <main class="main-layout">
-
-    <section>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">📤</div>
-          <h2>Nueva Orden de Mercado</h2>
-        </div>
-        <div class="card-body">
-
-          <div class="direction-grid">
-            <button id="btnBuy" class="btn-direction btn-buy active" onclick="setDirection('BUY')" aria-pressed="true">
-              ▲ COMPRAR
-              <span class="dir-label">LONG / BUY</span>
-            </button>
-            <button id="btnSell" class="btn-direction btn-sell" onclick="setDirection('SELL')" aria-pressed="false">
-              ▼ VENDER
-              <span class="dir-label">SHORT / SELL</span>
-            </button>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="inputTicker">Ticker / Símbolo</label>
-              <input id="inputTicker" class="form-control" type="text" placeholder="ej. FSM" maxlength="10" oninput="this.value = this.value.toUpperCase(); updateSummary();" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="inputQty">Cantidad (Shares)</label>
-              <input id="inputQty" class="form-control" type="number" placeholder="ej. 100" min="1" step="1" oninput="updateSummary();" />
-            </div>
-
-            <hr class="form-divider" />
-
-            <div class="form-group">
-              <label class="form-label" for="selectOrderType">Tipo de Orden</label>
-              <select id="selectOrderType" class="form-control" onchange="handleOrderTypeChange(); updateSummary();">
-                <option value="MKT">Market (MKT)</option>
-                <option value="LMT">Limit (LMT)</option>
-                <option value="STP">Stop (STP)</option>
-              </select>
-            </div>
-
-            <div id="fieldLimitPrice" class="form-group price-field hidden">
-              <label class="form-label" for="inputLimitPrice">Precio Límite (USD)</label>
-              <input id="inputLimitPrice" class="form-control" type="number" placeholder="ej. 180.50" min="0.01" step="0.01" oninput="updateSummary();" />
-            </div>
-
-            <div id="fieldStopPrice" class="form-group price-field hidden">
-              <label class="form-label" for="inputStopPrice">Precio Stop (USD)</label>
-              <input id="inputStopPrice" class="form-control" type="number" placeholder="ej. 175.00" min="0.01" step="0.01" oninput="updateSummary();" />
-            </div>
-          </div>
-
-          <button id="btnSubmit" class="btn-submit buy-mode" onclick="openConfirmModal()">
-            ▲ ENVIAR ORDEN DE COMPRA →
-          </button>
-
-        </div>
+  <main class="grid grid-cols-1 lg:grid-cols-3 gap-5 px-6 md:px-10 pb-16">
+    
+    <!-- Formulario de Orden -->
+    <div class="col-span-1 lg:col-span-2 bg-azulinst2 border border-azulinst rounded-md p-6">
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <button id="btnBuy" class="bg-verdeok text-white font-bold py-3 rounded border-2 border-verdeok transition" onclick="setDir('BUY')">COMPRAR</button>
+        <button id="btnSell" class="bg-transparent text-rojoalerta font-bold py-3 rounded border-2 border-rojoalerta hover:bg-rojoalerta/10 transition" onclick="setDir('SELL')">VENDER</button>
       </div>
-    </section>
 
-    <aside>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">💰</div>
-          <h2>Resumen Financiero</h2>
-        </div>
-        <div class="card-body">
-          <div class="price-ticker-info">
-            <div>
-              <div id="summaryTickerSym" class="ticker-sym">—</div>
-              <div style="font-size:11px;color:var(--color-muted)">Precio sim. de mercado</div>
-            </div>
-            <div id="summaryMktPrice" class="ticker-price">$—</div>
-          </div>
-
-          <div class="cost-list">
-            <div class="cost-row">
-              <span class="cost-label">Subtotal de la orden</span>
-              <span class="cost-value" id="costSubtotal">$—</span>
-            </div>
-            <div class="cost-row">
-              <span class="cost-label">Comisión est. Broker</span>
-              <span class="cost-value" id="costCommission">$—</span>
-            </div>
-            <div class="cost-row impact">
-              <span class="cost-label">Impacto s/ Cartera</span>
-              <span class="cost-value" id="costImpact">—%</span>
-            </div>
-            <div class="cost-row total">
-              <span class="cost-label">Costo total est.</span>
-              <span class="cost-value" id="costTotal">$—</span>
-            </div>
-          </div>
-
-          <p class="portfolio-hint">
-            📊 Cartera base simulada: <strong>$50,000.00</strong><br>
-            Comisión IB: $0.005/acción (mín. $1.00)
-          </p>
-        </div>
-      </div>
-    </aside>
-
-    <section class="history-section">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">📋</div>
-          <h2>Historial de Órdenes Transmitidas</h2>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>ID Orden</th>
-                <th>Timestamp</th>
-                <th>Ticker</th>
-                <th>Dirección</th>
-                <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-              <tr class="empty-row" id="emptyRow">
-                <td colspan="8">📭 No hay órdenes transmitidas aún. Completa el formulario y envía tu primera orden.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <div id="modalOverlay" class="modal-overlay" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div id="modalDirBand" class="modal-dir-band buy">▲ CONFIRMACIÓN DE COMPRA</div>
-      
-      <div class="modal-header">
+      <div class="grid grid-cols-2 gap-4 font-mono text-sm">
         <div>
-          <h3>Confirmar Transmisión</h3>
-          <p>Revisa los detalles antes de enviar a TWS API</p>
+          <label class="block text-xs text-slate-400 mb-1">Ticker</label>
+          <input id="inTicker" type="text" placeholder="FSM" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100 uppercase" oninput="calc()">
         </div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
-      </div>
-
-      <div class="modal-body" id="modalMainContent">
-        <div class="modal-summary">
-          <div class="modal-summary-header">Detalles de la operación</div>
-          <div class="modal-summary-row"><span class="ms-label">Ticker</span><span class="ms-value" id="msTicker">—</span></div>
-          <div class="modal-summary-row"><span class="ms-label">Dirección</span><span class="ms-value" id="msDirection">—</span></div>
-          <div class="modal-summary-row"><span class="ms-label">Tipo de orden</span><span class="ms-value" id="msType">—</span></div>
-          <div class="modal-summary-row"><span class="ms-label">Cantidad</span><span class="ms-value" id="msQty">—</span></div>
-          <div class="modal-summary-row"><span class="ms-label">Subtotal</span><span class="ms-value" id="msSubtotal">—</span></div>
-          <div class="modal-summary-row ms-total"><span class="ms-label">Total Est.</span><span class="ms-value" id="msTotal">—</span></div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Cantidad</label>
+          <input id="inQty" type="number" value="100" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100" oninput="calc()">
         </div>
-
-        <div class="modal-warning">
-          <span>⚠️</span>
-          <span>Esta acción enviará los parámetros a la API TWS de Interactive Brokers bajo un entorno seguro de simulación.</span>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Tipo</label>
+          <select id="inType" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100">
+            <option value="MKT">Market (MKT)</option>
+            <option value="LMT">Limit (LMT)</option>
+          </select>
         </div>
-
-        <div class="modal-actions">
-          <button class="btn-cancel-modal" onclick="closeModal()">Cancelar</button>
-          <button id="btnConfirmModal" class="btn-confirm-modal buy" onclick="processOrderTransmission()">Confirmar Envío</button>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Precio Referencial ($)</label>
+          <input id="inPrice" type="number" value="15.50" class="w-full bg-azulinst/50 border border-azulinst rounded px-3 py-2 text-slate-100" oninput="calc()">
         </div>
       </div>
 
-      <div class="modal-sending" id="modalSendingContent">
-        <div class="spinner"></div>
-        <p><strong>Transmitiendo a TWS API...</strong></p>
-        <p style="font-size:11px; color:var(--color-muted)">Estableciendo socket y enviando descriptor Contract & Order...</p>
+      <button id="btnSubmit" class="mt-6 w-full bg-verdeok hover:bg-green-600 text-white font-bold py-3 rounded transition" onclick="submitOrder()">
+        ENVIAR ORDEN →
+      </button>
+    </div>
+
+    <!-- Resumen Costos -->
+    <div class="col-span-1 space-y-5">
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5 font-mono">
+        <h2 class="text-xs tracking-wide uppercase text-slate-400 mb-4">Resumen Financiero</h2>
+        <div class="flex justify-between py-2 border-b border-azulinst">
+          <span class="text-slate-400 text-xs">Subtotal</span><span id="cSub">$1,550.00</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-azulinst">
+          <span class="text-slate-400 text-xs">Comisión IB (est.)</span><span id="cCom">$1.00</span>
+        </div>
+        <div class="flex justify-between py-3 text-oroclaro font-bold">
+          <span class="text-xs">Total Estimado</span><span id="cTot">$1,551.00</span>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-2 text-center">Basado en cartera simulada de $50k</p>
       </div>
     </div>
-  </div>
+
+    <!-- Tabla Historial -->
+    <div class="col-span-1 lg:col-span-3 bg-azulinst2 border border-azulinst rounded-md mt-4 overflow-hidden">
+      <div class="px-5 py-4 border-b border-azulinst bg-azulinst/30">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400">Historial de Transmisiones</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left font-mono text-sm">
+          <thead>
+            <tr class="text-slate-400 text-xs border-b border-azulinst bg-[#13203A]">
+              <th class="px-5 py-3 font-normal">ID</th>
+              <th class="px-5 py-3 font-normal">Ticker</th>
+              <th class="px-5 py-3 font-normal">Dir</th>
+              <th class="px-5 py-3 font-normal">Qty</th>
+              <th class="px-5 py-3 font-normal">Total</th>
+              <th class="px-5 py-3 font-normal">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="orderTable">
+            <tr><td colspan="6" class="px-5 py-8 text-center text-slate-500">No hay órdenes en la sesión.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
 
   <script>
-    let currentDirection = 'BUY';
-    const portfolioCash = 50000.00;
-    // Precios de mercado simulados
-    // Precios de mercado simulados — tickers del sector minero del proyecto
-    const mockPrices = { 'FSM': 6.45, 'BVN': 23.95, 'BHP': 58.30, 'ABX.TO': 21.40, 'VOLCABC1.LM': 0.85 };
+    let dir = 'BUY';
+    let count = 0;
 
-    function setDirection(dir) {
-      currentDirection = dir;
-      const btnBuy = document.getElementById('btnBuy');
-      const btnSell = document.getElementById('btnSell');
-      const btnSubmit = document.getElementById('btnSubmit');
-
-      if(dir === 'BUY') {
-        btnBuy.classList.add('active'); btnBuy.setAttribute('aria-pressed', 'true');
-        btnSell.classList.remove('active'); btnSell.setAttribute('aria-pressed', 'false');
-        btnSubmit.className = "btn-submit buy-mode";
-        btnSubmit.innerText = "▲ ENVIAR ORDEN DE COMPRA →";
+    function setDir(d) {
+      dir = d;
+      const b = document.getElementById('btnBuy'), s = document.getElementById('btnSell'), sub = document.getElementById('btnSubmit');
+      if(d === 'BUY') {
+        b.className = "bg-verdeok text-white font-bold py-3 rounded border-2 border-verdeok transition";
+        s.className = "bg-transparent text-rojoalerta font-bold py-3 rounded border-2 border-rojoalerta hover:bg-rojoalerta/10 transition";
+        sub.className = "mt-6 w-full bg-verdeok hover:bg-green-600 text-white font-bold py-3 rounded transition";
       } else {
-        btnSell.classList.add('active'); btnSell.setAttribute('aria-pressed', 'true');
-        btnBuy.classList.remove('active'); btnBuy.setAttribute('aria-pressed', 'false');
-        btnSubmit.className = "btn-submit sell-mode";
-        btnSubmit.innerText = "▼ ENVIAR ORDEN DE VENTA →";
+        s.className = "bg-rojoalerta text-white font-bold py-3 rounded border-2 border-rojoalerta transition";
+        b.className = "bg-transparent text-verdeok font-bold py-3 rounded border-2 border-verdeok hover:bg-verdeok/10 transition";
+        sub.className = "mt-6 w-full bg-rojoalerta hover:bg-red-700 text-white font-bold py-3 rounded transition";
       }
-      updateSummary();
     }
 
-    function handleOrderTypeChange() {
-      const type = document.getElementById('selectOrderType').value;
-      const fLimit = document.getElementById('fieldLimitPrice');
-      const fStop = document.getElementById('fieldStopPrice');
-
-      fLimit.classList.add('hidden');
-      fStop.classList.add('hidden');
-
-      if(type === 'LMT') fLimit.classList.remove('hidden');
-      if(type === 'STP') fStop.classList.remove('hidden');
-    }
-
-    function getExecutionPrice(ticker, type) {
-      const basePrice = mockPrices[ticker] || 100.00;
-      if (type === 'LMT') {
-        return parseFloat(document.getElementById('inputLimitPrice').value) || basePrice;
-      }
-      if (type === 'STP') {
-        return parseFloat(document.getElementById('inputStopPrice').value) || basePrice;
-      }
-      return basePrice;
-    }
-
-    function updateSummary() {
-      const ticker = document.getElementById('inputTicker').value.trim();
-      const qty = parseInt(document.getElementById('inputQty').value) || 0;
-      const type = document.getElementById('selectOrderType').value;
-
-      const currentPrice = ticker ? (mockPrices[ticker] || 125.50) : null;
+    function calc() {
+      const q = parseFloat(document.getElementById('inQty').value) || 0;
+      const p = parseFloat(document.getElementById('inPrice').value) || 0;
+      const sub = q * p;
+      const com = Math.max(1.00, q * 0.005);
       
-      document.getElementById('summaryTickerSym').innerText = ticker ? ticker : "—";
-      document.getElementById('summaryMktPrice').innerText = currentPrice ? `$${currentPrice.toFixed(2)}` : "$—";
-
-      if(!ticker || qty <= 0) {
-        document.getElementById('costSubtotal').innerText = "$—";
-        document.getElementById('costCommission').innerText = "$—";
-        document.getElementById('costImpact').innerText = "—%";
-        document.getElementById('costTotal').innerText = "$—";
-        return;
-      }
-
-      const execPrice = getExecutionPrice(ticker, type);
-      const subtotal = qty * execPrice;
-      const commission = Math.max(1.00, qty * 0.005); // Mínimo $1
-      const total = subtotal + commission;
-      const impact = (total / portfolioCash) * 100;
-
-      document.getElementById('costSubtotal').innerText = `$${subtotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-      document.getElementById('costCommission').innerText = `$${commission.toFixed(2)}`;
-      document.getElementById('costImpact').innerText = `${impact.toFixed(2)}%`;
-      document.getElementById('costTotal').innerText = `$${total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+      document.getElementById('cSub').textContent = `$${sub.toFixed(2)}`;
+      document.getElementById('cCom').textContent = `$${com.toFixed(2)}`;
+      document.getElementById('cTot').textContent = `$${(sub + com).toFixed(2)}`;
     }
 
-    function openConfirmModal() {
-      const ticker = document.getElementById('inputTicker').value.trim();
-      const qty = parseInt(document.getElementById('inputQty').value) || 0;
-      const type = document.getElementById('selectOrderType').value;
+    function submitOrder() {
+      const t = document.getElementById('inTicker').value.toUpperCase() || 'UNK';
+      const q = document.getElementById('inQty').value;
+      const tot = document.getElementById('cTot').textContent;
+      const tb = document.getElementById('orderTable');
 
-      if(!ticker) { alert('Por favor introduce un Símbolo/Ticker.'); return; }
-      if(qty <= 0) { alert('Por favor introduce una cantidad válida.'); return; }
-
-      const execPrice = getExecutionPrice(ticker, type);
-      const subtotal = qty * execPrice;
-      const commission = Math.max(1.00, qty * 0.005);
-      const total = subtotal + commission;
-
-      // Configurar textos en modal
-      document.getElementById('msTicker').innerText = ticker;
-      document.getElementById('msDirection').innerText = currentDirection;
-      document.getElementById('msType').innerText = type;
-      document.getElementById('msQty').innerText = qty;
-      document.getElementById('msSubtotal').innerText = `$${subtotal.toFixed(2)}`;
-      document.getElementById('msTotal').innerText = `$${total.toFixed(2)}`;
-
-      const band = document.getElementById('modalDirBand');
-      const confirmBtn = document.getElementById('btnConfirmModal');
-      if(currentDirection === 'BUY') {
-        band.innerText = "▲ CONFIRMACIÓN DE COMPRA";
-        band.className = "modal-dir-band buy";
-        confirmBtn.className = "btn-confirm-modal buy";
-      } else {
-        band.innerText = "▼ CONFIRMACIÓN DE VENTA";
-        band.className = "modal-dir-band sell";
-        confirmBtn.className = "btn-confirm-modal sell";
-      }
-
-      document.getElementById('modalMainContent').style.display = 'block';
-      document.getElementById('modalSendingContent').style.display = 'none';
-      document.getElementById('modalOverlay').classList.add('open');
+      if(count === 0) tb.innerHTML = '';
+      count++;
+      
+      const colorDir = dir === 'BUY' ? 'text-verdeok' : 'text-rojoalerta';
+      
+      tb.insertAdjacentHTML('afterbegin', `
+        <tr class="border-b border-azulinst/50 hover:bg-azulinst/20 transition">
+          <td class="px-5 py-3 text-slate-500">#${Math.floor(1000+Math.random()*9000)}</td>
+          <td class="px-5 py-3 font-bold text-slate-200">${t}</td>
+          <td class="px-5 py-3 font-bold ${colorDir}">${dir}</td>
+          <td class="px-5 py-3 text-slate-300">${q}</td>
+          <td class="px-5 py-3 text-oroclaro font-bold">${tot}</td>
+          <td class="px-5 py-3"><span class="bg-verdeok/20 text-verdeok border border-verdeok/30 px-2 py-1 rounded text-xs">FILLED</span></td>
+        </tr>
+      `);
     }
-
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.remove('open');
-    }
-
-    function processOrderTransmission() {
-      document.getElementById('modalMainContent').style.display = 'none';
-      document.getElementById('modalSendingContent').style.display = 'block';
-
-      setTimeout(() => {
-        // Simular respuesta exitosa de TWS API tras 1.5s
-        const ticker = document.getElementById('inputTicker').value.trim();
-        const qty = parseInt(document.getElementById('inputQty').value) || 0;
-        const type = document.getElementById('selectOrderType').value;
-        const execPrice = getExecutionPrice(ticker, type);
-
-        const tableBody = document.getElementById('ordersTableBody');
-        const emptyRow = document.getElementById('emptyRow');
-        if (emptyRow) emptyRow.remove();
-
-        const timestamp = new Date().toLocaleTimeString();
-        const orderId = Math.floor(Math.random() * 900000) + 100000;
-
-        const rowHtml = `
-          <tr>
-            <td class="td-id">#${orderId}</td>
-            <td style="color:var(--color-subtext)">${timestamp}</td>
-            <td class="td-ticker">${ticker}</td>
-            <td class="${currentDirection === 'BUY' ? 'td-type-buy' : 'td-type-sell'}">${currentDirection}</td>
-            <td>${qty}</td>
-            <td class="td-price">$${execPrice.toFixed(2)}</td>
-            <td><span class="pill pill-filled">FILLED</span></td>
-          </tr>
-        `;
-        tableBody.insertAdjacentHTML('afterbegin', rowHtml);
-        
-        closeModal();
-        // Limpiar formulario
-        document.getElementById('inputTicker').value = '';
-        document.getElementById('inputQty').value = '';
-        updateSummary();
-      }, 1500);
-    }
-  
-/* __INVESTAI_NAV_JS__ */
-    (function(){
-      const slider = document.querySelector('.investai-nav-links');
-      if(slider){
-        let isDown=false, startX, scrollLeft, moved=false;
-        slider.addEventListener('mousedown', e=>{ isDown=true; moved=false; startX=e.pageX-slider.offsetLeft; scrollLeft=slider.scrollLeft; slider.style.cursor='grabbing'; });
-        slider.addEventListener('mouseleave', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mouseup', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mousemove', e=>{ if(!isDown) return; e.preventDefault(); moved=true; const x=e.pageX-slider.offsetLeft; slider.scrollLeft=scrollLeft-(x-startX)*1.5; });
-        slider.addEventListener('click', e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
-      }
-      if(typeof window.navigateModule!=='undefined') return;
-      const cfg={
-        m1:{title:"Autenticación (M1)",desc:"Gestión de seguridad, tokens JWT y control de acceso MFA.",icon:"🔐"},
-        m2:{title:"Ingesta de Datos (M2)",desc:"Pipelines de captura y streaming desde APIs financieras.",icon:"📥"},
-        m3:{title:"Clasificación (M3)",desc:"Etiquetado de patrones de mercado mediante algoritmos supervisados.",icon:"🏷️"},
-        m4:{title:"Regresión (M4)",desc:"Modelos para estimación de precios objetivos.",icon:"📊"},
-        m5:{title:"Análisis NLP (M5)",desc:"Procesamiento de Lenguaje Natural sobre noticias financieras.",icon:"💬"},
-        m6:{title:"Core Predictivo (M6)",desc:"Núcleo central de IA que coordina todos los módulos.",icon:"🧠"},
-        m7:{title:"Estrategias (M7)",desc:"Generación algorítmica de reglas operativas.",icon:"💡"},
-        m8:{title:"Órdenes (M8)",desc:"Enrutador inteligente con control estricto de Slippage.",icon:"⚡"},
-        m9:{title:"Portafolios (M9)",desc:"Rebalanceo automático mediante optimización de varianza media.",icon:"💼"},
-        m10:{title:"Consola (M10)",desc:"Panel de administración para control de umbrales operativos.",icon:"🖥️"},
-        m11:{title:"Backtesting (M11)",desc:"Simulador sobre series históricas con métricas Sharpe y Sortino.",icon:"⏳"}
-      };
-      window.navigateModule=function(id,e){
-        const link=document.getElementById('nav-'+id); if(!link) return;
-        const url=link.getAttribute('href');
-        if(!url||url==='#'){e.preventDefault();window.showPlaceholderView(id);return;}
-        e.preventDefault();
-        fetch(url,{method:'HEAD'}).then(r=>r.ok?window.location.href=url:window.showPlaceholderView(id)).catch(()=>window.location.href=url);
-      };
-      window.showPlaceholderView=function(id){
-        const c=cfg[id]; if(!c) return;
-        document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active-view'));
-        const ph=document.getElementById('view-placeholder');
-        if(ph){
-          const keys=['placeholder-title','placeholder-panel-title','placeholder-desc','placeholder-icon'];
-          const vals=[c.title,c.title+' en Desarrollo',c.desc,c.icon];
-          keys.forEach((k,i)=>{ const el=document.getElementById(k); if(el) el.innerText=vals[i]; });
-          ph.classList.add('active-view');
-        }
-        document.querySelectorAll('.investai-nav-links a').forEach(a=>a.classList.remove('active-tab'));
-        const al=document.getElementById('nav-'+id); if(al) al.classList.add('active-tab');
-      };
-      window.resetToCore=function(){window.location.href='modulo6.6-core-predictivo-central.html';};
-    })();
-/* __INVESTAI_NAV_JS__ */
   </script>
-  <script src="investai-api-integration.js"></script>
 </body>
 </html>

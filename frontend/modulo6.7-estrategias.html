@@ -1,949 +1,170 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestAI — Módulo 7: Generador de Estrategias</title>
-
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-
-  <style>
-/* __INVESTAI_NAV_CSS__ */
-    body { display: block !important; align-items: unset !important; justify-content: unset !important; padding-top: 0 !important; }
-    .investai-navbar { background-color: #112244 !important; color: white !important; display: flex !important; align-items: center !important; padding: 0 10px !important; height: 50px !important; box-shadow: 0 2px 16px rgba(0,0,0,.18) !important; position: sticky !important; top: 0 !important; z-index: 9999 !important; box-sizing: border-box !important; width: 100% !important; overflow: hidden !important; flex-direction: column !important; justify-content: flex-start !important; padding-bottom: 0 !important; }
-    .investai-brand { display: flex !important; align-items: center !important; font-weight: bold !important; font-size: 14px !important; margin-right: 12px !important; color: white !important; text-decoration: none !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-    .investai-brand-icon { color: #ffcc00 !important; margin-right: 8px !important; font-weight: 900 !important; }
-    .investai-nav-row { display: flex !important; align-items: center !important; width: 100% !important; height: 40px !important; flex-shrink: 0 !important; }
-    .investai-nav-links { display: flex !important; gap: 3px !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important; height: 34px !important; align-items: center !important; flex: 1 1 0% !important; min-width: 0 !important; -webkit-overflow-scrolling: touch !important; cursor: grab !important;
-      scrollbar-width: thin !important;
-      scrollbar-color: rgba(255,255,255,0.35) transparent !important;
-    }
-    .investai-nav-links::-webkit-scrollbar { display: block !important; height: 3px !important; }
-    .investai-nav-links::-webkit-scrollbar-track { background: transparent !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35) !important; border-radius: 99px !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6) !important; }
-    .investai-nav-links a { color: rgba(255, 255, 255, 0.65) !important; text-decoration: none !important; padding: 4px 7px !important; border-radius: 5px !important; font-size: 11px !important; font-weight: 500 !important; transition: background 0.2s ease, color 0.2s ease !important; flex-shrink: 0 !important; cursor: pointer !important; display: inline-block !important; }
-    .investai-nav-links a:hover { color: white !important; background-color: rgba(255, 255, 255, 0.10) !important; }
-    .investai-nav-links a.active-tab { background-color: #ffcc00 !important; color: #112244 !important; font-weight: 700 !important; }
-/* __INVESTAI_NAV_CSS__ */
-
-    /* =============================================
-       TOKENS DE DISEÑO CORPORATIVO INVESTAI
-       Paleta: fondo #F5F7FA, tarjetas #FFFFFF,
-       primario #1F3864, acento #C5961A
-    ============================================= */
-    :root {
-      --bg:          #F5F7FA;
-      --card:        #FFFFFF;
-      --primary:     #1F3864;
-      --primary-lt:  #2A4A80;
-      --accent:      #C5961A;
-      --accent-lt:   #E3B840;
-      --gain:        #2A7D4F;
-      --gain-bg:     #E8F5EE;
-      --loss:        #C0392B;
-      --loss-bg:     #FDECEA;
-      --neutral:     #6B7A99;
-      --border:      #DDE3EF;
-      --text:        #1A2340;
-      --text-soft:   #4A5568;
-      --shadow:      0 2px 12px rgba(31,56,100,0.08);
-      --shadow-md:   0 4px 24px rgba(31,56,100,0.12);
-      --radius:      10px;
-      --radius-sm:   6px;
-      --font:        'Segoe UI', system-ui, -apple-system, sans-serif;
-      --mono:        'Consolas', 'Monaco', monospace;
-    }
-
-    /* =============================================
-       RESET Y BASE
-    ============================================= */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 15px; scroll-behavior: smooth; }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.55;
-    }
-
-    /* =============================================
-       BARRA DE NAVEGACIÓN COMPARTIDA INVESTAI
-    ============================================= */
-    .nav {
-      background: var(--primary);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .nav-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      gap: 0;
-      height: 56px;
-      padding: 0 20px;
-    }
-    .nav-brand {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: .04em;
-      margin-right: 32px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .nav-brand span { color: var(--accent-lt); }
-    .nav-tabs {
-      display: flex;
-      gap: 2px;
-      overflow-x: auto;
-      scrollbar-width: none; /* Oculta scroll en Firefox */
-      flex: 1;
-    }
-    .nav-tabs::-webkit-scrollbar { display: none; } /* Oculta scroll en Chrome/Safari */
-    
-    .nav-tab {
-      padding: 0 14px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: rgba(255,255,255,.68);
-      font-size: .82rem;
-      font-weight: 500;
-      white-space: nowrap;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: color .15s, border-color .15s;
-      text-decoration: none;
-      letter-spacing: .02em;
-    }
-    .nav-tab:hover { color: #fff; }
-    
-    /* Pestaña activa obligatoria del M7 */
-    .nav-tab.active {
-      color: var(--accent-lt);
-      border-bottom-color: var(--accent);
-      font-weight: 600;
-    }
-    .nav-tab .tab-num {
-      background: rgba(255,255,255,.12);
-      border-radius: 4px;
-      font-size: .70rem;
-      padding: 1px 4px;
-      font-family: var(--mono);
-    }
-    .nav-tab.active .tab-num { background: var(--accent); color: #fff; }
-
-    /* =============================================
-       CABECERA DE MÓDULO
-    ============================================= */
-    .module-header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-lt) 100%);
-      padding: 28px 20px 24px;
-      color: #fff;
-    }
-    .module-header-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .module-badge {
-      font-size: .72rem;
-      font-weight: 600;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--accent-lt);
-      margin-bottom: 4px;
-    }
-    .module-title {
-      font-size: 1.45rem;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-    .module-desc {
-      font-size: .85rem;
-      color: rgba(255,255,255,.72);
-      margin-top: 4px;
-    }
-    .ai-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.2);
-      border-radius: 20px;
-      padding: 6px 16px;
-      font-size: .8rem;
-      color: rgba(255,255,255,.85);
-      flex-shrink: 0;
-    }
-    .ai-dot {
-      width: 8px; height: 8px;
-      background: #4AE38A;
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: .6; transform: scale(1.2); }
-    }
-
-    /* =============================================
-       LAYOUT PRINCIPAL
-    ============================================= */
-    .main {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 24px 20px 40px;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      grid-template-rows: auto auto;
-      gap: 20px;
-    }
-    @media (max-width: 900px) {
-      .main { grid-template-columns: 1fr; }
-    }
-
-    /* =============================================
-       TARJETAS GENÉRICAS
-    ============================================= */
-    .card {
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
-    .card-head {
-      padding: 14px 18px 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .card-icon {
-      width: 30px; height: 30px;
-      border-radius: 7px;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-    .card-title {
-      font-size: .88rem;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: .02em;
-    }
-    .card-sub {
-      font-size: .75rem;
-      color: var(--neutral);
-    }
-    .card-body { padding: 18px; }
-
-    /* =============================================
-       PANEL IZQUIERDO: SELECTOR + CONFIGURADOR
-    ============================================= */
-    .left-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .strategy-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .strat-btn {
-      padding: 10px 8px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: var(--bg);
-      cursor: pointer;
-      text-align: center;
-      transition: border-color .15s, background .15s, color .15s;
-      font-size: .78rem;
-      font-weight: 600;
-      color: var(--text-soft);
-      line-height: 1.3;
-    }
-    .strat-btn:hover { border-color: var(--primary-lt); color: var(--primary); }
-    .strat-btn.active {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: #fff;
-    }
-    .strat-btn .strat-tag {
-      display: block;
-      font-size: .66rem;
-      font-weight: 400;
-      opacity: .7;
-      margin-top: 2px;
-    }
-
-    /* =============================================
-       CONFIGURADOR DE PATAS (LEGS)
-    ============================================= */
-    .legs-container { display: flex; flex-direction: column; gap: 12px; }
-
-    .leg-card {
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      transition: border-color .15s;
-    }
-    .leg-card:hover { border-color: #b0bcd8; }
-
-    .leg-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-    }
-    .leg-label {
-      font-size: .78rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-    .leg-badge {
-      font-size: .68rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 12px;
-    }
-    .leg-badge.call { background: #EBF4FF; color: #1A6DB5; }
-    .leg-badge.put  { background: #FEF3E2; color: #B86B0A; }
-    .leg-badge.buy  { background: var(--gain-bg); color: var(--gain); }
-    .leg-badge.sell { background: var(--loss-bg); color: var(--loss); }
-
-    .leg-fields {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      padding: 12px;
-    }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label {
-      font-size: .72rem;
-      font-weight: 600;
-      color: var(--neutral);
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-    .field select,
-    .field input {
-      padding: 7px 10px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: .82rem;
-      color: var(--text);
-      background: #fff;
-      outline: none;
-      font-family: var(--font);
-      transition: border-color .15s;
-      width: 100%;
-    }
-    .field select:focus,
-    .field input:focus { border-color: var(--primary-lt); }
-    .field input[type="number"] { font-family: var(--mono); }
-
-    /* =============================================
-       PANEL DERECHO: GRÁFICO + RESUMEN
-    ============================================= */
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .chart-card {
-      flex: 1;
-      min-height: 380px;
-    }
-    #payoff-chart {
-      width: 100%;
-      height: 380px;
-    }
-    @media (max-width: 900px) {
-      #payoff-chart { height: 300px; }
-      .chart-card { min-height: 300px; }
-    }
-
-    /* =============================================
-       RESUMEN DE COBERTURA
-    ============================================= */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-    @media (max-width: 700px) {
-      .metrics-grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    .metric {
-      border-radius: var(--radius-sm);
-      padding: 14px 14px 12px;
-      border: 1.5px solid var(--border);
-      background: var(--bg);
-      position: relative;
-      overflow: hidden;
-    }
-    .metric::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 3px;
-    }
-    .metric.gain::before  { background: var(--gain); }
-    .metric.loss::before  { background: var(--loss); }
-    .metric.info::before  { background: var(--primary-lt); }
-    .metric.ratio::before { background: var(--accent); }
-
-    .metric-icon { font-size: 1.2rem; margin-bottom: 6px; }
-    .metric-label {
-      font-size: .68rem;
-      font-weight: 600;
-      color: var(--neutral);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      margin-bottom: 4px;
-    }
-    .metric-value {
-      font-size: 1.22rem;
-      font-weight: 700;
-      font-family: var(--mono);
-      line-height: 1.1;
-    }
-    .metric.gain  .metric-value { color: var(--gain); }
-    .metric.loss  .metric-value { color: var(--loss); }
-    .metric.info  .metric-value { color: var(--primary); }
-    .metric.ratio .metric-value { color: var(--accent); }
-    .metric-note {
-      font-size: .7rem;
-      color: var(--neutral);
-      margin-top: 2px;
-    }
-
-    /* =============================================
-       BREAKEVEN CHIPS
-    ============================================= */
-    .breakeven-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 10px 18px 14px;
-    }
-    .breakeven-label { font-size: .75rem; color: var(--neutral); font-weight: 600; }
-    .be-chip {
-      background: #FEF8E7;
-      border: 1px solid #E5C96B;
-      color: #8A6300;
-      font-family: var(--mono);
-      font-size: .78rem;
-      font-weight: 700;
-      padding: 3px 11px;
-      border-radius: 12px;
-    }
-    .be-none { font-size: .78rem; color: var(--neutral); font-style: italic; }
-
-    /* =============================================
-       INFO BANNER DE ESTRATEGIA
-    ============================================= */
-    .strat-info-bar {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 14px;
-      background: #EEF2F9;
-      border-radius: var(--radius-sm);
-      margin-bottom: 2px;
-    }
-    .strat-info-bar .si-icon { font-size: 1.1rem; flex-shrink: 0; }
-    .strat-info-bar .si-text {
-      font-size: .78rem;
-      color: var(--text-soft);
-      line-height: 1.45;
-    }
-    .strat-info-bar .si-text strong { color: var(--primary); }
-
-    /* =============================================
-       RESPONSIVE AJUSTES ADICIONALES
-    ============================================= */
-    @media (max-width: 500px) {
-      .nav-tab .tab-label { display: none; }
-      .strategy-grid { grid-template-columns: 1fr; }
-      .module-title { font-size: 1.15rem; }
-      .metrics-grid { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
-</head>
-<body>
-
-<nav class="investai-navbar">
-    <a href="index.html" class="investai-brand">
-        <span class="investai-brand-icon">|||</span> InvestAI
-    </a>
-    <div class="investai-nav-links">
-        <a href="modulo6.1-autenticacion.html" id="nav-m1" data-mod="m1" onclick="navigateModule('m1', event)">Autenticación (M1)</a>
-        <a href="modulo_mercado.html" id="nav-m2" data-mod="m2" onclick="navigateModule('m2', event)">Ingesta de Datos (M2)</a>
-        <a href="modulo_svc.html" id="nav-m3" data-mod="m3" onclick="navigateModule('m3', event)">Predicciones SVC (M3)</a>
-        <a href="modulo6.4-lstm.html" id="nav-m4" data-mod="m4" onclick="navigateModule('m4', event)">Pronósticos LSTM (M4)</a>
-        <a href="modulo6.5-nlp-operaciones.html" id="nav-m5" data-mod="m5" onclick="navigateModule('m5', event)">Análisis NLP (M5)</a>
-        <a href="modulo6.6-core-predictivo-central.html" id="nav-m6" data-mod="m6" onclick="navigateModule('m6', event)">Core Predictivo (M6)</a>
-        <a href="modulo6.7-estrategias.html" id="nav-m7" data-mod="m7" onclick="navigateModule('m7', event)" class="active-tab">Estrategias (M7)</a>
-        <a href="modulo6.8-ordenes.html" id="nav-m8" data-mod="m8" onclick="navigateModule('m8', event)">Órdenes (M8)</a>
-        <a href="modulo6.9-portafolio.html" id="nav-m9" data-mod="m9" onclick="navigateModule('m9', event)">Portafolios (M9)</a>
-        <a href="modulo6.10-consola.html" id="nav-m10" data-mod="m10" onclick="navigateModule('m10', event)">Consola (M10)</a>
-        <a href="modulo6.11-backtesting.html" id="nav-m11" data-mod="m11" onclick="navigateModule('m11', event)">Backtesting (M11)</a>
-    </div>
-</nav>
-
-<div class="module-header">
-  <div class="module-header-inner">
-    <div>
-      <div class="module-badge">Módulo 7</div>
-      <h1 class="module-title">Generador de Estrategias y Coberturas</h1>
-      <div class="module-desc">Construye estructuras con opciones Call/Put, analiza el perfil P&amp;L y evalúa el riesgo de cobertura en tiempo real.</div>
-    </div>
-    <div class="ai-pill">
-      <div class="ai-dot"></div>
-      Motor IA activo
-    </div>
-  </div>
-</div>
-
-<div class="main">
-  <div class="left-panel">
-    <div class="card">
-      <div class="card-head">
-        <div class="card-icon">🧩</div>
-        <div>
-          <div class="card-title">Estructura de Estrategia</div>
-          <div class="card-sub">Selecciona la estrategia base</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="strat-info-bar" id="strat-info-bar">
-          <div class="si-icon">ℹ️</div>
-          <div class="si-text" id="strat-info-text">
-            <strong>Bull Call Spread:</strong> Compra un call de strike bajo y vende uno de strike alto. Beneficio limitado al alza con costo reducido.
-          </div>
-        </div>
-        <br/>
-        <div class="strategy-grid" id="strategy-grid">
-          <button class="strat-btn active" data-strat="bull_call_spread">
-            Bull Call Spread <span class="strat-tag">Alcista · Débito</span>
-          </button>
-          <button class="strat-btn" data-strat="bear_put_spread">
-            Bear Put Spread <span class="strat-tag">Bajista · Débito</span>
-          </button>
-          <button class="strat-btn" data-strat="iron_condor">
-            Iron Condor <span class="strat-tag">Lateral · Crédito</span>
-          </button>
-          <button class="strat-btn" data-strat="straddle">
-            Straddle <span class="strat-tag">Volátil · Débito</span>
-          </button>
-          <button class="strat-btn" data-strat="strangle">
-            Strangle <span class="strat-tag">Volátil · Débito</span>
-          </button>
-          <button class="strat-btn" data-strat="custom">
-            Personalizada <span class="strat-tag">Libre · Manual</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="card-icon">⚙️</div>
-        <div>
-          <div class="card-title">Configuración de Patas</div>
-          <div class="card-sub">Parámetros de cada opción</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="legs-container" id="legs-container"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="right-panel">
-    <div class="card chart-card">
-      <div class="card-head">
-        <div class="card-icon">📈</div>
-        <div>
-          <div class="card-title">Perfil de Rendimiento al Vencimiento</div>
-          <div class="card-sub">Diagrama P&amp;L vs precio del activo subyacente</div>
-        </div>
-      </div>
-      <div class="card-body" style="padding: 10px 14px 14px;">
-        <div id="payoff-chart"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">
-        <div class="card-icon">🛡️</div>
-        <div>
-          <div class="card-title">Resumen de Cobertura</div>
-          <div class="card-sub">Métricas clave de la estructura</div>
-        </div>
-      </div>
-      <div class="breakeven-row" id="breakeven-row">
-        <span class="breakeven-label">Break-even(s):</span>
-        <span class="be-none">Calculando…</span>
-      </div>
-      <div class="card-body" style="padding-top: 0;">
-        <div class="metrics-grid">
-          <div class="metric gain">
-            <div class="metric-icon">🟢</div>
-            <div class="metric-label">Máx. Beneficio</div>
-            <div class="metric-value" id="m-profit">—</div>
-            <div class="metric-note">Por contrato (×100)</div>
-          </div>
-          <div class="metric loss">
-            <div class="metric-icon">🔴</div>
-            <div class="metric-label">Máx. Riesgo</div>
-            <div class="metric-value" id="m-risk">—</div>
-            <div class="metric-note">Pérdida máx total</div>
-          </div>
-          <div class="metric info">
-            <div class="metric-icon">📋</div>
-            <div class="metric-label">Garantía / Margen</div>
-            <div class="metric-value" id="m-margin">—</div>
-            <div class="metric-note">Estimado Broker</div>
-          </div>
-          <div class="metric ratio">
-            <div class="metric-icon">⚖️</div>
-            <div class="metric-label">Ratio R/B</div>
-            <div class="metric-value" id="m-ratio">—</div>
-            <div class="metric-note">Riesgo por $1 ganancia</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernesto Investing AI · Generador de Estrategias</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <script>
-const ESTRATEGIAS = {
-  bull_call_spread: {
-    label: 'Bull Call Spread',
-    info: '<strong>Bull Call Spread:</strong> Compra un call de strike bajo y vende uno de strike alto. Beneficio limitado al alza con costo reducido.',
-    legs: [
-      { tipo: 'call', accion: 'buy',  strike: 100, prima: 5 },
-      { tipo: 'call', accion: 'sell', strike: 110, prima: 2 },
-    ]
-  },
-  bear_put_spread: {
-    label: 'Bear Put Spread',
-    info: '<strong>Bear Put Spread:</strong> Compra un put de strike alto y vende uno de strike bajo. Gana cuando el activo cae, con pérdida acotada.',
-    legs: [
-      { tipo: 'put', accion: 'buy',  strike: 100, prima: 5 },
-      { tipo: 'put', accion: 'sell', strike: 90,  prima: 2 },
-    ]
-  },
-  iron_condor: {
-    label: 'Iron Condor',
-    info: '<strong>Iron Condor:</strong> Combina un Bear Call Spread y un Bull Put Spread. Recauda prima neta; gana si el activo permanece en rango lateral.',
-    legs: [
-      { tipo: 'put',  accion: 'buy',  strike: 85,  prima: 1 },
-      { tipo: 'put',  accion: 'sell', strike: 90,  prima: 3 },
-      { tipo: 'call', accion: 'sell', strike: 110, prima: 3 },
-      { tipo: 'call', accion: 'buy',  strike: 115, prima: 1 },
-    ]
-  },
-  straddle: {
-    label: 'Straddle',
-    info: '<strong>Straddle:</strong> Compra un call y un put al mismo strike. Gana si el activo se mueve significativamente en cualquier dirección.',
-    legs: [
-      { tipo: 'call', accion: 'buy', strike: 100, prima: 6 },
-      { tipo: 'put',  accion: 'buy', strike: 100, prima: 5 },
-    ]
-  },
-  strangle: {
-    label: 'Strangle',
-    info: '<strong>Strangle:</strong> Similar al straddle pero con strikes diferentes (OTM). Más barato, requiere mayor movimiento para ser rentable.',
-    legs: [
-      { tipo: 'call', accion: 'buy', strike: 105, prima: 3.5 },
-      { tipo: 'put',  accion: 'buy', strike:  95, prima: 3   },
-    ]
-  },
-  custom: {
-    label: 'Personalizada',
-    info: '<strong>Estrategia libre:</strong> Configura cada pata manualmente con cualquier combinación de opciones Call/Put.',
-    legs: [
-      { tipo: 'call', accion: 'buy', strike: 100, prima: 5 },
-    ]
-  }
-};
-
-let estrategiaActual = 'bull_call_spread';
-let legsActuales = JSON.parse(JSON.stringify(ESTRATEGIAS[estrategiaActual].legs));
-
-function payoffLeg(leg, S) {
-  const K = parseFloat(leg.strike) || 0;
-  const p = parseFloat(leg.prima)  || 0;
-  const intrinsic = leg.tipo === 'call' ? Math.max(0, S - K) : Math.max(0, K - S);
-  return leg.accion === 'buy' ? intrinsic - p : p - intrinsic;
-}
-
-function calcularPayoff(legs) {
-  if (!legs || legs.length === 0) return { precios: [], pnl: [] };
-  const strikes = legs.map(l => parseFloat(l.strike) || 100);
-  const minStrike = Math.min(...strikes);
-  const maxStrike = Math.max(...strikes);
-  const centro    = (minStrike + maxStrike) / 2;
-  const margen    = Math.max(30, (maxStrike - minStrike) * 1.5, 20);
-  const sMin      = Math.max(0, centro - margen);
-  const sMax      = centro + margen;
-  const pasos     = 300;
-
-  const precios = [];
-  const pnl     = [];
-
-  for (let i = 0; i <= pasos; i++) {
-    const S = sMin + (sMax - sMin) * (i / pasos);
-    precios.push(parseFloat(S.toFixed(4)));
-    const totalPnl = legs.reduce((acc, leg) => acc + payoffLeg(leg, S), 0);
-    pnl.push(parseFloat(totalPnl.toFixed(4)));
-  }
-  return { precios, pnl };
-}
-
-function encontrarBreakEvens(precios, pnl) {
-  const bes = [];
-  for (let i = 1; i < pnl.length; i++) {
-    const p0 = pnl[i - 1], p1 = pnl[i];
-    if ((p0 < 0 && p1 >= 0) || (p0 >= 0 && p1 < 0)) {
-      const t  = -p0 / (p1 - p0);
-      const be = precios[i - 1] + t * (precios[i] - precios[i - 1]);
-      if(!bes.includes(parseFloat(be.toFixed(2)))) bes.push(parseFloat(be.toFixed(2)));
-    }
-  }
-  return bes;
-}
-
-function renderizarGrafico(legs) {
-  const { precios, pnl } = calcularPayoff(legs);
-  if (!precios.length) return;
-
-  const bePoints = encontrarBreakEvens(precios, pnl);
-  const maxVal   = Math.max(...pnl);
-  const minVal   = Math.min(...pnl);
-
-  const pnlPos = pnl.map(v => v >= 0 ? v : null);
-  const pnlNeg = pnl.map(v => v <= 0 ? v : null);
-
-  const trazaLinea = {
-    x: precios, y: pnl, type: 'scatter', mode: 'lines', name: 'P&L Neto',
-    line: { color: '#1F3864', width: 3 },
-    hovertemplate: 'Precio: $%{x:.2f}<br>P&L: $%{y:.2f}<extra></extra>'
-  };
-
-  const trazaGain = {
-    x: precios, y: pnlPos, type: 'scatter', mode: 'none', fill: 'tozeroy',
-    fillcolor: 'rgba(42,125,79,0.15)', showlegend: false, connectgaps: false
-  };
-
-  const trazaLoss = {
-    x: precios, y: pnlNeg, type: 'scatter', mode: 'none', fill: 'tozeroy',
-    fillcolor: 'rgba(192,57,43,0.12)', showlegend: false, connectgaps: false
-  };
-
-  const trazaCero = {
-    x: [precios[0], precios[precios.length - 1]], y: [0, 0],
-    type: 'scatter', mode: 'lines', line: { color: '#9AAABF', width: 1, dash: 'dot' },
-    showlegend: false, hoverinfo: 'skip'
-  };
-
-  const trazas = [trazaGain, trazaLoss, trazaCero, trazaLinea];
-
-  if (bePoints.length > 0) {
-    trazas.push({
-      x: bePoints, y: bePoints.map(() => 0), type: 'scatter', mode: 'markers+text',
-      name: 'Break-even', marker: { color: '#C5961A', size: 10, symbol: 'diamond' },
-      text: bePoints.map(b => `$${b}`), textposition: 'top center',
-      textfont: { size: 10, family: 'Consolas' }
-    });
-  }
-
-  const layout = {
-    template: 'plotly_white', // Requisito estricto de UI
-    margin: { t: 25, r: 20, b: 40, l: 50 },
-    xaxis: { title: 'Precio del Subyacente ($)', gridcolor: '#EDF0F6' },
-    yaxis: { title: 'Beneficio / Pérdida ($)', gridcolor: '#EDF0F6' },
-    hovermode: 'x unified',
-    plot_bgcolor: '#FFFFFF',
-    paper_bgcolor: '#FFFFFF'
-  };
-
-  Plotly.newPlot('payoff-chart', trazas, layout, { responsive: true });
-  actualizarMetricasDOM(legs, bePoints, maxVal, minVal);
-}
-
-function actualizarMetricasDOM(legs, bePoints, maxProfit, maxLoss) {
-  const beRow = document.getElementById('breakeven-row');
-  beRow.innerHTML = '<span class="breakeven-label">Break-even(s):</span>';
-  if(bePoints.length === 0) {
-    beRow.innerHTML += '<span class="be-none">Ninguno en este rango</span>';
-  } else {
-    bePoints.forEach(be => {
-      beRow.innerHTML += `<span class="be-chip">$${be}</span>`;
-    });
-  }
-
-  const mult = 100; // Multiplicador estándar del mercado de opciones americano
-  const profText = maxProfit === Infinity || maxProfit > 99999 ? 'Ilimitado' : `$${(maxProfit * mult).toFixed(2)}`;
-  const lossText = maxLoss === -Infinity || maxLoss < -99999 ? 'Ilimitado' : `$${(Math.abs(maxLoss) * mult).toFixed(2)}`;
-
-  document.getElementById('m-profit').innerText = profText;
-  document.getElementById('m-risk').innerText = lossText;
-
-  const netPremium = legs.reduce((acc, l) => acc + (l.accion === 'buy' ? -parseFloat(l.prima) : parseFloat(l.prima)), 0);
-  let margenCalculado = 0;
-  if (netPremium < 0) {
-    margenCalculado = Math.abs(netPremium) * mult; 
-  } else {
-    margenCalculado = Math.abs(maxLoss) !== Infinity ? Math.abs(maxLoss) * mult : 2000;
-  }
-  document.getElementById('m-margin').innerText = `$${margenCalculado.toFixed(2)}`;
-
-  let ratio = 'N/A';
-  if(maxProfit > 0 && Math.abs(maxLoss) !== Infinity && maxLoss !== 0) {
-    ratio = `1 : ${(maxProfit / Math.abs(maxLoss)).toFixed(1)}`;
-  } else if (maxProfit === Infinity) {
-    ratio = 'Excelente';
-  } else if (maxProfit <= 0) {
-    ratio = 'Negativo';
-  }
-  document.getElementById('m-ratio').innerText = ratio;
-}
-
-function renderizarFormularioLegs() {
-  const container = document.getElementById('legs-container');
-  container.innerHTML = '';
-
-  legsActuales.forEach((leg, index) => {
-    const legCard = document.createElement('div');
-    legCard.className = 'leg-card';
-    legCard.innerHTML = `
-      <div class="leg-head">
-        <span class="leg-label">Pata #${index + 1}</span>
-        <div>
-          <span class="leg-badge ${leg.tipo}">${leg.tipo.toUpperCase()}</span>
-          <span class="leg-badge ${leg.accion}">${leg.accion === 'buy' ? 'COMPRA' : 'VENTA'}</span>
-        </div>
-      </div>
-      <div class="leg-fields">
-        <div class="field">
-          <label>Strike ($)</label>
-          <input type="number" data-index="${index}" data-field="strike" value="${leg.strike}" step="0.5" min="1">
-        </div>
-        <div class="field">
-          <label>Prima ($)</label>
-          <input type="number" data-index="${index}" data-field="prima" value="${leg.prima}" step="0.1" min="0.01">
-        </div>
-      </div>
-    `;
-    container.appendChild(legCard);
-  });
-
-  container.querySelectorAll('input').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const idx = e.target.getAttribute('data-index');
-      const field = e.target.getAttribute('data-field');
-      legsActuales[idx][field] = parseFloat(e.target.value) || 0;
-      renderizarGrafico(legsActuales);
-    });
-  });
-}
-
-document.getElementById('strategy-grid').querySelectorAll('.strat-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    const targetBtn = e.currentTarget;
-    document.getElementById('strategy-grid').querySelectorAll('.strat-btn').forEach(b => b.classList.remove('active'));
-    targetBtn.classList.add('active');
-
-    estrategiaActual = targetBtn.getAttribute('data-strat');
-    document.getElementById('strat-info-text').innerHTML = ESTRATEGIAS[estrategiaActual].info;
-    
-    legsActuales = JSON.parse(JSON.stringify(ESTRATEGIAS[estrategiaActual].legs));
-    renderizarFormularioLegs();
-    renderizarGrafico(legsActuales);
-  });
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  renderizarFormularioLegs();
-  renderizarGrafico(legsActuales);
-});
-
-/* __INVESTAI_NAV_JS__ */
-    (function(){
-      const slider = document.querySelector('.investai-nav-links');
-      if(slider){
-        let isDown=false, startX, scrollLeft, moved=false;
-        slider.addEventListener('mousedown', e=>{ isDown=true; moved=false; startX=e.pageX-slider.offsetLeft; scrollLeft=slider.scrollLeft; slider.style.cursor='grabbing'; });
-        slider.addEventListener('mouseleave', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mouseup', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mousemove', e=>{ if(!isDown) return; e.preventDefault(); moved=true; const x=e.pageX-slider.offsetLeft; slider.scrollLeft=scrollLeft-(x-startX)*1.5; });
-        slider.addEventListener('click', e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
+  (function verificarSesion() {
+      const usuarioActivo = localStorage.getItem('investai_user');
+      if (!usuarioActivo) {
+        alert("🔒 Acceso denegado. Por favor, inicia sesión para acceder al sistema InvestAI.");
+        window.location.replace("modulo6.1-autenticacion.html");
       }
-      if(typeof window.navigateModule!=='undefined') return;
-      const cfg={
-        m1:{title:"Autenticación (M1)",desc:"Gestión de seguridad, tokens JWT y control de acceso MFA.",icon:"🔐"},
-        m2:{title:"Ingesta de Datos (M2)",desc:"Pipelines de captura y streaming desde APIs financieras.",icon:"📥"},
-        m3:{title:"Clasificación (M3)",desc:"Etiquetado de patrones de mercado mediante algoritmos supervisados.",icon:"🏷️"},
-        m4:{title:"Regresión (M4)",desc:"Modelos para estimación de precios objetivos.",icon:"📊"},
-        m5:{title:"Análisis NLP (M5)",desc:"Procesamiento de Lenguaje Natural sobre noticias financieras.",icon:"💬"},
-        m6:{title:"Core Predictivo (M6)",desc:"Núcleo central de IA que coordina todos los módulos.",icon:"🧠"},
-        m7:{title:"Estrategias (M7)",desc:"Generación algorítmica de reglas operativas.",icon:"💡"},
-        m8:{title:"Órdenes (M8)",desc:"Enrutador inteligente con control estricto de Slippage.",icon:"⚡"},
-        m9:{title:"Portafolios (M9)",desc:"Rebalanceo automático mediante optimización de varianza media.",icon:"💼"},
-        m10:{title:"Consola (M10)",desc:"Panel de administración para control de umbrales operativos.",icon:"🖥️"},
-        m11:{title:"Backtesting (M11)",desc:"Simulador sobre series históricas con métricas Sharpe y Sortino.",icon:"⏳"}
-      };
-      window.navigateModule=function(id,e){
-        const link=document.getElementById('nav-'+id); if(!link) return;
-        const url=link.getAttribute('href');
-        if(!url||url==='#'){e.preventDefault();window.showPlaceholderView(id);return;}
-        e.preventDefault();
-        fetch(url,{method:'HEAD'}).then(r=>r.ok?window.location.href=url:window.showPlaceholderView(id)).catch(()=>window.location.href=url);
-      };
-      window.showPlaceholderView=function(id){
-        const c=cfg[id]; if(!c) return;
-        document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active-view'));
-        const ph=document.getElementById('view-placeholder');
-        if(ph){
-          const keys=['placeholder-title','placeholder-panel-title','placeholder-desc','placeholder-icon'];
-          const vals=[c.title,c.title+' en Desarrollo',c.desc,c.icon];
-          keys.forEach((k,i)=>{ const el=document.getElementById(k); if(el) el.innerText=vals[i]; });
-          ph.classList.add('active-view');
-        }
-        document.querySelectorAll('.investai-nav-links a').forEach(a=>a.classList.remove('active-tab'));
-        const al=document.getElementById('nav-'+id); if(al) al.classList.add('active-tab');
-      };
-      window.resetToCore=function(){window.location.href='modulo6.6-core-predictivo-central.html';};
     })();
-/* __INVESTAI_NAV_JS__ */
+  tailwind.config = { theme: { extend: { colors: { azulinst: '#1F3864', azulinst2: '#16294C', oro: '#C5961A', oroclaro: '#E4B94E', verdeok: '#3C8C5B', rojoalerta: '#B23B3B' }, fontFamily: { display: ['Georgia', 'Cambria', 'serif'], mono: ['Consolas', 'Menlo', 'monospace'] } } } }
+</script>
+<style>body { background-color: #10182B; }</style>
+</head>
+<body class="min-h-screen text-slate-100 font-sans">
+
+  <nav class="flex flex-wrap items-center justify-between gap-3 px-6 md:px-10 py-5 border-b border-azulinst/60">
+    <a href="index.html" class="font-mono text-xs text-slate-400 hover:text-oroclaro transition">← Volver al portal</a>
+    <div class="font-mono text-xs tracking-widest uppercase text-slate-400">Ernesto <span class="text-oroclaro font-semibold">Investing AI</span></div>
+    <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+      <span class="w-2 h-2 rounded-full bg-verdeok"></span>
+      <span>API conectada</span>
+    </div>
+  </nav>
+
+  <header class="px-6 md:px-10 pt-9 pb-6">
+    <h1 class="font-display font-bold text-3xl md:text-4xl">Estrategias y Coberturas</h1>
+    <p class="mt-2 text-slate-300 text-sm max-w-2xl">Construye estructuras con opciones Call/Put y analiza el perfil P&L en tiempo real (Cálculo Frontend).</p>
+  </header>
+
+  <main class="grid grid-cols-1 lg:grid-cols-3 gap-5 px-6 md:px-10 pb-16">
+    
+    <!-- Controles -->
+    <div class="col-span-1 space-y-5">
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Seleccionar Estrategia</h2>
+        <div class="grid grid-cols-2 gap-2" id="strategy-grid">
+          <button class="strat-btn bg-oro text-azulinst2 font-bold py-2 rounded text-xs transition" data-strat="bull_call_spread">Bull Call Spread</button>
+          <button class="strat-btn bg-azulinst border border-azulinst hover:border-oro text-slate-300 py-2 rounded text-xs transition" data-strat="iron_condor">Iron Condor</button>
+          <button class="strat-btn bg-azulinst border border-azulinst hover:border-oro text-slate-300 py-2 rounded text-xs transition" data-strat="straddle">Straddle</button>
+          <button class="strat-btn bg-azulinst border border-azulinst hover:border-oro text-slate-300 py-2 rounded text-xs transition" data-strat="custom">Personalizada</button>
+        </div>
+        <p id="strat-info" class="mt-4 text-xs text-slate-400 font-mono"></p>
+      </div>
+
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Configuración de Patas</h2>
+        <div id="legs-container" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="col-span-1 lg:col-span-2 space-y-5">
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Perfil de Rendimiento (P&L)</h2>
+        <div id="payoff-chart" class="w-full h-[400px]"></div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-azulinst2 border-t-4 border-t-verdeok rounded-md p-4">
+          <span class="text-[10px] uppercase font-mono text-slate-400">Máx. Beneficio</span>
+          <div id="m-profit" class="text-xl font-bold font-mono text-verdeok mt-1">—</div>
+        </div>
+        <div class="bg-azulinst2 border-t-4 border-t-rojoalerta rounded-md p-4">
+          <span class="text-[10px] uppercase font-mono text-slate-400">Máx. Riesgo</span>
+          <div id="m-risk" class="text-xl font-bold font-mono text-rojoalerta mt-1">—</div>
+        </div>
+        <div class="bg-azulinst2 border-t-4 border-t-azulinst rounded-md p-4">
+          <span class="text-[10px] uppercase font-mono text-slate-400">Break-evens</span>
+          <div id="m-be" class="text-sm font-bold font-mono text-slate-200 mt-1 mt-2">—</div>
+        </div>
+        <div class="bg-azulinst2 border-t-4 border-t-oro rounded-md p-4">
+          <span class="text-[10px] uppercase font-mono text-slate-400">Ratio R/B</span>
+          <div id="m-ratio" class="text-xl font-bold font-mono text-oroclaro mt-1">—</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const ESTRATEGIAS = {
+      bull_call_spread: { info: 'Compra Call strike bajo, vende Call strike alto. Beneficio limitado, costo reducido.', legs: [{ tipo: 'call', accion: 'buy', strike: 100, prima: 5 }, { tipo: 'call', accion: 'sell', strike: 110, prima: 2 }] },
+      iron_condor: { info: 'Combina Bear Call Spread y Bull Put Spread. Recauda prima neta; gana en rango lateral.', legs: [{ tipo: 'put', accion: 'buy', strike: 85, prima: 1 }, { tipo: 'put', accion: 'sell', strike: 90, prima: 3 }, { tipo: 'call', accion: 'sell', strike: 110, prima: 3 }, { tipo: 'call', accion: 'buy', strike: 115, prima: 1 }] },
+      straddle: { info: 'Compra Call y Put mismo strike. Gana con alta volatilidad en cualquier dirección.', legs: [{ tipo: 'call', accion: 'buy', strike: 100, prima: 6 }, { tipo: 'put', accion: 'buy', strike: 100, prima: 5 }] },
+      custom: { info: 'Estrategia manual.', legs: [{ tipo: 'call', accion: 'buy', strike: 100, prima: 5 }] }
+    };
+
+    let strat = 'bull_call_spread';
+    let currentLegs = JSON.parse(JSON.stringify(ESTRATEGIAS[strat].legs));
+
+    document.querySelectorAll('.strat-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.strat-btn').forEach(b => b.className = 'strat-btn bg-azulinst border border-azulinst hover:border-oro text-slate-300 py-2 rounded text-xs transition');
+        e.target.className = 'strat-btn bg-oro text-azulinst2 font-bold py-2 rounded text-xs transition';
+        strat = e.target.dataset.strat;
+        currentLegs = JSON.parse(JSON.stringify(ESTRATEGIAS[strat].legs));
+        renderForm();
+        renderChart();
+      });
+    });
+
+    function payoff(leg, S) {
+      const K = parseFloat(leg.strike) || 0, p = parseFloat(leg.prima) || 0;
+      const intr = leg.tipo === 'call' ? Math.max(0, S - K) : Math.max(0, K - S);
+      return leg.accion === 'buy' ? intr - p : p - intr;
+    }
+
+    function renderForm() {
+      document.getElementById('strat-info').textContent = ESTRATEGIAS[strat].info;
+      const c = document.getElementById('legs-container');
+      c.innerHTML = currentLegs.map((l, i) => `
+        <div class="bg-azulinst/30 border border-azulinst p-3 rounded font-mono text-xs">
+          <div class="flex justify-between mb-2">
+            <span class="text-slate-400">Pata #${i+1}</span>
+            <span class="${l.accion==='buy'?'text-verdeok':'text-rojoalerta'} font-bold">${l.accion.toUpperCase()} ${l.tipo.toUpperCase()}</span>
+          </div>
+          <div class="flex gap-2">
+            <input type="number" data-idx="${i}" data-f="strike" value="${l.strike}" class="w-1/2 bg-azulinst2 border border-azulinst rounded px-2 py-1 text-slate-200">
+            <input type="number" data-idx="${i}" data-f="prima" value="${l.prima}" class="w-1/2 bg-azulinst2 border border-azulinst rounded px-2 py-1 text-slate-200">
+          </div>
+        </div>
+      `).join('');
+
+      c.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => {
+        currentLegs[e.target.dataset.idx][e.target.dataset.f] = parseFloat(e.target.value) || 0;
+        renderChart();
+      }));
+    }
+
+    function renderChart() {
+      const strikes = currentLegs.map(l => l.strike);
+      const sMin = Math.max(0, Math.min(...strikes) - 30), sMax = Math.max(...strikes) + 30;
+      let S = [], PNL = [], bes = [];
+      
+      for(let i=0; i<=200; i++) {
+        let valS = sMin + (sMax - sMin) * (i/200);
+        S.push(valS); PNL.push(currentLegs.reduce((a, l) => a + payoff(l, valS), 0));
+        if(i > 0 && PNL[i-1]*PNL[i] < 0) {
+          let t = -PNL[i-1] / (PNL[i] - PNL[i-1]);
+          bes.push((S[i-1] + t*(S[i] - S[i-1])).toFixed(2));
+        }
+      }
+
+      Plotly.newPlot('payoff-chart', [
+        { x: S, y: PNL.map(v => v>=0?v:null), fill: 'tozeroy', fillcolor: 'rgba(60, 140, 91, 0.2)', mode: 'none' },
+        { x: S, y: PNL.map(v => v<=0?v:null), fill: 'tozeroy', fillcolor: 'rgba(178, 59, 59, 0.2)', mode: 'none' },
+        { x: S, y: PNL, type: 'scatter', line: { color: '#E4B94E', width: 2 } }
+      ], {
+        paper_bgcolor: '#16294C', plot_bgcolor: '#16294C', font: { color: '#94A3B8', family: 'Consolas, monospace' },
+        margin: { l: 40, r: 20, t: 10, b: 30 }, xaxis: { gridcolor: '#1F3864' }, yaxis: { gridcolor: '#1F3864' }, showlegend: false
+      }, { responsive: true, displayModeBar: false });
+
+      const maxP = Math.max(...PNL), maxL = Math.min(...PNL);
+      document.getElementById('m-profit').textContent = maxP > 999 ? 'Ilimitado' : `$${(maxP*100).toFixed(0)}`;
+      document.getElementById('m-risk').textContent = maxL < -999 ? 'Ilimitado' : `$${(Math.abs(maxL)*100).toFixed(0)}`;
+      document.getElementById('m-be').textContent = bes.length ? bes.map(b=>`$${b}`).join(', ') : 'N/A';
+      document.getElementById('m-ratio').textContent = (maxP>0 && maxL<0 && maxL>-999) ? `1 : ${(maxP/Math.abs(maxL)).toFixed(1)}` : 'N/A';
+    }
+
+    renderForm(); renderChart();
   </script>
-  <script src="investai-api-integration.js"></script>
 </body>
 </html>

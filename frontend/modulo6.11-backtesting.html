@@ -3,944 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InvestAI · Módulo 11: Backtesting de Estrategias</title>
-
+<title>Ernesto Investing AI · Backtesting</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-
-<style>
-/* __INVESTAI_NAV_CSS__ */
-    body { display: block !important; align-items: unset !important; justify-content: unset !important; padding-top: 0 !important; }
-    .investai-navbar { background-color: #112244 !important; color: white !important; display: flex !important; align-items: center !important; padding: 0 10px !important; height: 50px !important; box-shadow: 0 2px 16px rgba(0,0,0,.18) !important; position: sticky !important; top: 0 !important; z-index: 9999 !important; box-sizing: border-box !important; width: 100% !important; overflow: hidden !important; flex-direction: column !important; justify-content: flex-start !important; padding-bottom: 0 !important; }
-    .investai-brand { display: flex !important; align-items: center !important; font-weight: bold !important; font-size: 14px !important; margin-right: 12px !important; color: white !important; text-decoration: none !important; flex-shrink: 0 !important; white-space: nowrap !important; }
-    .investai-brand-icon { color: #ffcc00 !important; margin-right: 8px !important; font-weight: 900 !important; }
-    .investai-nav-row { display: flex !important; align-items: center !important; width: 100% !important; height: 40px !important; flex-shrink: 0 !important; }
-    .investai-nav-links { display: flex !important; gap: 3px !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important; height: 34px !important; align-items: center !important; flex: 1 1 0% !important; min-width: 0 !important; -webkit-overflow-scrolling: touch !important; cursor: grab !important;
-      scrollbar-width: thin !important;
-      scrollbar-color: rgba(255,255,255,0.35) transparent !important;
-    }
-    .investai-nav-links::-webkit-scrollbar { display: block !important; height: 3px !important; }
-    .investai-nav-links::-webkit-scrollbar-track { background: transparent !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35) !important; border-radius: 99px !important; }
-    .investai-nav-links::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.6) !important; }
-    .investai-nav-links a { color: rgba(255, 255, 255, 0.65) !important; text-decoration: none !important; padding: 4px 7px !important; border-radius: 5px !important; font-size: 11px !important; font-weight: 500 !important; transition: background 0.2s ease, color 0.2s ease !important; flex-shrink: 0 !important; cursor: pointer !important; display: inline-block !important; }
-    .investai-nav-links a:hover { color: white !important; background-color: rgba(255, 255, 255, 0.10) !important; }
-    .investai-nav-links a.active-tab { background-color: #ffcc00 !important; color: #112244 !important; font-weight: 700 !important; }
-/* __INVESTAI_NAV_CSS__ */
-
-  /* ============================================================
-     RESET Y VARIABLES GLOBALES
-     Paleta corporativa InvestAI definida por especificación
-  ============================================================ */
-  :root{
-    --bg-app:#F5F7FA;
-    --bg-panel:#FFFFFF;
-    --primario:#1F3864;
-    --primario-claro:#2C4A7C;
-    --acento:#C5961A;
-    --texto:#000000;
-    --texto-tenue:#5B6472;
-    --borde:#E3E7ED;
-    --rojo-perdida:#9C3B3B;
-    --verde-ganancia:#2E6B4F;
-    --gris-buyhold:#9AA7B8;
-    --radio:10px;
-    --sombra: 0 1px 2px rgba(15,30,60,0.06), 0 4px 16px rgba(15,30,60,0.05);
-  }
-
-  *{ box-sizing:border-box; }
-
-  html,body{
-    margin:0;
-    padding:0;
-    background:var(--bg-app);
-    color:var(--texto);
-    font-family:'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-
-  /* Tipografía utilitaria para cifras financieras: monoespaciada tabular */
-  .cifra{
-    font-family:'Courier New', Consolas, monospace;
-    font-variant-numeric: tabular-nums;
-    letter-spacing:-0.02em;
-  }
-
-  a{ text-decoration:none; color:inherit; }
-
-  /* ============================================================
-     BARRA DE NAVEGACIÓN UNIFICADA INVESTAI
-  ============================================================ */
-  .navbar{
-    background:var(--primario);
-    color:#FFFFFF;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 24px;
-    height:64px;
-    position:sticky;
-    top:0;
-    z-index:100;
-    box-shadow:0 2px 10px rgba(0,0,0,0.18);
-  }
-
-  .navbar .marca{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-weight:700;
-    font-size:18px;
-    white-space:nowrap;
-    margin-right:20px;
-  }
-  .navbar .marca .punto-acento{
-    width:9px;height:9px;border-radius:50%;
-    background:var(--acento);
-    display:inline-block;
-  }
-
-  .nav-links{
-    display:flex;
-    align-items:center;
-    gap:4px;
-    overflow-x:auto;
-    scrollbar-width:none;
-    flex-grow:1;
-  }
-  .nav-links::-webkit-scrollbar{ display:none; }
-
-  .nav-item{
-    padding:8px 12px;
-    border-radius:6px;
-    font-size:13px;
-    font-weight:500;
-    color:rgba(255,255,255,0.72);
-    white-space:nowrap;
-    transition:background .15s ease, color .15s ease;
-  }
-  .nav-item:hover{
-    background:rgba(255,255,255,0.08);
-    color:#FFFFFF;
-  }
-  .nav-item.activo{
-    background:var(--primario-claro);
-    color:var(--acento);
-    font-weight:700;
-    border:1px solid rgba(197,150,26,0.3);
-  }
-
-  .nav-usuario{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-size:13px;
-    color:rgba(255,255,255,0.75);
-    flex-shrink:0;
-    margin-left:20px;
-  }
-  .avatar{
-    width:30px;height:30px;border-radius:50%;
-    background:var(--acento);
-    color:var(--primario);
-    display:flex;align-items:center;justify-content:center;
-    font-weight:700;font-size:13px;
-  }
-
-  /* ============================================================
-     CONTENEDOR PRINCIPAL
-  ============================================================ */
-  .contenedor{
-    max-width:1280px;
-    margin:0 auto;
-    padding:28px 24px 64px;
-  }
-
-  .encabezado-modulo{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    flex-wrap:wrap;
-    gap:16px;
-    margin-bottom:24px;
-  }
-  .encabezado-modulo .eyebrow{
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:0.08em;
-    color:var(--acento);
-    text-transform:uppercase;
-    margin:0 0 6px;
-  }
-  .encabezado-modulo h1{
-    margin:0;
-    font-size:26px;
-    color:var(--primario);
-    font-weight:800;
-  }
-  .encabezado-modulo p{
-    margin:6px 0 0;
-    color:var(--texto-tenue);
-    font-size:14px;
-    max-width:580px;
-  }
-
-  .pildora-estado{
-    background:#EAF0F8;
-    color:var(--primario);
-    border:1px solid #D3DFEF;
-    padding:8px 14px;
-    border-radius:20px;
-    font-size:12.5px;
-    font-weight:700;
-    display:flex;
-    align-items:center;
-    gap:7px;
-  }
-  .pildora-estado .punto{
-    width:7px;height:7px;border-radius:50%;
-    background:var(--primario);
-  }
-
-  /* ============================================================
-     PANEL BASE
-  ============================================================ */
-  .panel{
-    background:var(--bg-panel);
-    border:1px solid var(--borde);
-    border-radius:var(--radio);
-    box-shadow:var(--sombra);
-    padding:20px 22px;
-    margin-bottom:20px;
-  }
-  .panel-titulo{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:4px;
-    flex-wrap:wrap;
-    gap:10px;
-  }
-  .panel-titulo h2{
-    font-size:15px;
-    font-weight:700;
-    color:var(--primario);
-    margin:0;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
-  .panel-titulo h2 .num-seccion{
-    background:var(--primario);
-    color:#fff;
-    width:20px;height:20px;
-    border-radius:5px;
-    font-size:11px;
-    display:flex;align-items:center;justify-content:center;
-    font-weight:700;
-    flex-shrink:0;
-  }
-  .panel-subt{
-    font-size:12px;
-    color:var(--texto-tenue);
-    margin:0 0 16px;
-  }
-
-  /* ============================================================
-     1. CONFIGURADOR DE BACKTESTING (FORMULARIO)
-  ============================================================ */
-  .grid-config{
-    display:grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap:16px;
-    align-items:end;
-  }
-
-  .campo{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .campo label{
-    font-size:11.5px;
-    font-weight:700;
-    color:var(--texto-tenue);
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-  }
-  .campo input,
-  .campo select{
-    border:1px solid var(--borde);
-    border-radius:7px;
-    padding:10px 11px;
-    font-size:13.5px;
-    color:var(--texto);
-    background:#FAFBFC;
-    font-family:inherit;
-    transition:border-color .15s ease, box-shadow .15s ease;
-  }
-  .campo input:focus,
-  .campo select:focus{
-    outline:none;
-    border-color:var(--primario);
-    box-shadow:0 0 0 3px rgba(31,56,100,0.12);
-    background:#fff;
-  }
-  .campo .prefijo-input{
-    position:relative;
-  }
-  .campo .prefijo-input span{
-    position:absolute;
-    left:11px; top:50%;
-    transform:translateY(-50%);
-    color:var(--texto-tenue);
-    font-size:13px;
-    pointer-events:none;
-  }
-  .campo .prefijo-input input{
-    padding-left:24px;
-  }
-
-  .btn-simular{
-    background:var(--primario);
-    color:#fff;
-    border:none;
-    border-radius:7px;
-    padding:11px 16px;
-    font-size:13.5px;
-    font-weight:700;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    transition: background .15s ease, transform .1s ease;
-    height:42px;
-  }
-  .btn-simular:hover{ background:var(--primario-claro); }
-  .btn-simular:active{ transform:scale(0.98); }
-  .btn-simular:disabled{
-    cursor:not-allowed;
-    background:#7C8CA6;
-  }
-  .btn-simular .icono-play{
-    width:0; height:0;
-    border-top:5px solid transparent;
-    border-bottom:5px solid transparent;
-    border-left:8px solid #fff;
-  }
-
-  /* ============================================================
-     BARRA DE PROGRESO DE SIMULACIÓN
-  ============================================================ */
-  .bloque-progreso{
-    margin-top:18px;
-    display:none;
-  }
-  .bloque-progreso.visible{ display:block; }
-
-  .progreso-cabecera{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    margin-bottom:7px;
-  }
-  .progreso-cabecera .etapa-actual{
-    font-size:12.5px;
-    color:var(--texto-tenue);
-    font-weight:600;
-  }
-  .progreso-cabecera .porcentaje-actual{
-    font-size:13.5px;
-    font-weight:800;
-    color:var(--primario);
-  }
-
-  .pista-progreso{
-    width:100%;
-    height:9px;
-    background:#E9EDF3;
-    border-radius:5px;
-    overflow:hidden;
-  }
-  .relleno-progreso{
-    height:100%;
-    width:0%;
-    background:linear-gradient(90deg, var(--primario), var(--acento));
-    border-radius:5px;
-    transition:width 0.18s linear;
-  }
-
-  /* ============================================================
-     ZONA DE RESULTADOS (oculta hasta completar simulación)
-  ============================================================ */
-  .zona-resultados{
-    opacity:0;
-    transform:translateY(10px);
-    transition: opacity .55s ease, transform .55s ease;
-    pointer-events:none;
-  }
-  .zona-resultados.revelado{
-    opacity:1;
-    transform:translateY(0);
-    pointer-events:auto;
-  }
-
-  .estado-vacio{
-    text-align:center;
-    padding:50px 20px;
-    color:var(--texto-tenue);
-    font-size:13px;
-    border:1px dashed var(--borde);
-    border-radius:var(--radio);
-    background:var(--bg-panel);
-  }
-  .estado-vacio .icono-vacio{
-    font-size:26px;
-    margin-bottom:8px;
-    opacity:0.5;
-  }
-  .estado-vacio.oculto{ display:none; }
-
-  /* ============================================================
-     2. CURVA DE EQUIDAD
-  ============================================================ */
-  .leyenda-curvas{
-    display:flex;
-    gap:18px;
-    margin-bottom:6px;
-    flex-wrap:wrap;
-  }
-  .leyenda-curvas .item-leyenda{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    font-size:12.5px;
-    font-weight:600;
-    color:var(--texto-tenue);
-  }
-  .leyenda-curvas .linea-leyenda{
-    width:18px; height:3px; border-radius:2px;
-  }
-
-  #grafico-equity{
-    width:100%;
-    height:420px;
-  }
-
-  /* ============================================================
-     3. RESUMEN DE MÉTRICAS DEL BACKTEST
-  ============================================================ */
-  .grid-metricas{
-    display:grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap:14px;
-  }
-
-  .tarjeta-metrica{
-    border:1px solid var(--borde);
-    border-radius:8px;
-    padding:16px 14px;
-    background:#FAFBFC;
-    position:relative;
-    overflow:hidden;
-  }
-  .tarjeta-metrica::before{
-    content:"";
-    position:absolute;
-    top:0; left:0;
-    width:100%; height:3px;
-    background:var(--barra-color, var(--primario));
-  }
-  .tarjeta-metrica .nombre-metrica{
-    font-size:11px;
-    font-weight:700;
-    color:var(--texto-tenue);
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-    margin:0 0 8px;
-    line-height:1.3;
-  }
-  .tarjeta-metrica .valor-metrica{
-    font-size:25px;
-    font-weight:800;
-    color:var(--primario);
-    line-height:1;
-    display:block;
-  }
-  .tarjeta-metrica .valor-metrica.positivo{ color:var(--verde-ganancia); }
-  .tarjeta-metrica .valor-metrica.negativo{ color:var(--rojo-perdida); }
-  .tarjeta-metrica .nota-metrica{
-    font-size:10.5px;
-    color:var(--texto-tenue);
-    margin-top:6px;
-  }
-
-  /* ============================================================
-     PIE DE PÁGINA
-  ============================================================ */
-  .nota-pie{
-    text-align:center;
-    font-size:11px;
-    color:var(--texto-tenue);
-    margin-top:30px;
-  }
-
-  /* ============================================================
-     RESPONSIVE: TABLET Y MOBILE
-  ============================================================ */
-  @media (max-width: 1080px){
-    .grid-config{ grid-template-columns: repeat(3, 1fr); }
-    .grid-metricas{ grid-template-columns: repeat(3, 1fr); }
-  }
-
-  @media (max-width: 640px){
-    .navbar{ padding:0 14px; }
-    .navbar .marca{ font-size:15px; }
-    .nav-usuario span{ display:none; }
-    .contenedor{ padding:18px 14px 48px; }
-    .encabezado-modulo h1{ font-size:21px; }
-    .grid-config{ grid-template-columns: 1fr 1fr; }
-    .grid-metricas{ grid-template-columns: 1fr 1fr; }
-    .tarjeta-metrica .valor-metrica{ font-size:22px; }
-    #grafico-equity{ height:320px; }
-    .panel{ padding:16px; }
-  }
-</style>
+<script>
+  (function verificarSesion() {
+      const usuarioActivo = localStorage.getItem('investai_user');
+      if (!usuarioActivo) {
+        alert("🔒 Acceso denegado. Por favor, inicia sesión para acceder al sistema InvestAI.");
+        window.location.replace("modulo6.1-autenticacion.html");
+      }
+    })();
+  tailwind.config = { theme: { extend: { colors: { azulinst: '#1F3864', azulinst2: '#16294C', oro: '#C5961A', oroclaro: '#E4B94E', verdeok: '#3C8C5B', rojoalerta: '#B23B3B' }, fontFamily: { display: ['Georgia', 'Cambria', 'serif'], mono: ['Consolas', 'Menlo', 'monospace'] } } } }
+</script>
+<style>body { background-color: #10182B; }</style>
 </head>
-<body>
+<body class="min-h-screen text-slate-100 font-sans">
 
-  <nav class="investai-navbar">
-    <a href="index.html" class="investai-brand">
-        <span class="investai-brand-icon">|||</span> InvestAI
-    </a>
-    <div class="investai-nav-links">
-        <a href="modulo6.1-autenticacion.html" id="nav-m1" data-mod="m1" onclick="navigateModule('m1', event)">Autenticación (M1)</a>
-        <a href="modulo_mercado.html" id="nav-m2" data-mod="m2" onclick="navigateModule('m2', event)">Ingesta de Datos (M2)</a>
-        <a href="modulo_svc.html" id="nav-m3" data-mod="m3" onclick="navigateModule('m3', event)">Predicciones SVC (M3)</a>
-        <a href="modulo6.4-lstm.html" id="nav-m4" data-mod="m4" onclick="navigateModule('m4', event)">Pronósticos LSTM (M4)</a>
-        <a href="modulo6.5-nlp-operaciones.html" id="nav-m5" data-mod="m5" onclick="navigateModule('m5', event)">Análisis NLP (M5)</a>
-        <a href="modulo6.6-core-predictivo-central.html" id="nav-m6" data-mod="m6" onclick="navigateModule('m6', event)">Core Predictivo (M6)</a>
-        <a href="modulo6.7-estrategias.html" id="nav-m7" data-mod="m7" onclick="navigateModule('m7', event)">Estrategias (M7)</a>
-        <a href="modulo6.8-ordenes.html" id="nav-m8" data-mod="m8" onclick="navigateModule('m8', event)">Órdenes (M8)</a>
-        <a href="modulo6.9-portafolio.html" id="nav-m9" data-mod="m9" onclick="navigateModule('m9', event)">Portafolios (M9)</a>
-        <a href="modulo6.10-consola.html" id="nav-m10" data-mod="m10" onclick="navigateModule('m10', event)">Consola (M10)</a>
-        <a href="modulo6.11-backtesting.html" id="nav-m11" data-mod="m11" onclick="navigateModule('m11', event)" class="active-tab">Backtesting (M11)</a>
+  <nav class="flex flex-wrap items-center justify-between gap-3 px-6 md:px-10 py-5 border-b border-azulinst/60">
+    <a href="index.html" class="font-mono text-xs text-slate-400 hover:text-oroclaro transition">← Volver al portal</a>
+    <div class="font-mono text-xs tracking-widest uppercase text-slate-400">Ernesto <span class="text-oroclaro font-semibold">Investing AI</span></div>
+    <div class="flex items-center gap-2 font-mono text-xs text-slate-400">
+      <span id="statusDot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+      <span id="statusText">Verificando…</span>
     </div>
-</nav>
+  </nav>
 
-  <div class="contenedor">
+  <header class="px-6 md:px-10 pt-9 pb-6">
+    <h1 class="font-display font-bold text-3xl md:text-4xl">Backtesting Histórico</h1>
+    <p class="mt-2 text-slate-300 text-sm max-w-2xl">Simulación del rendimiento de la estrategia generada por la IA frente al Benchmark pasivo (Buy & Hold).</p>
+  </header>
 
-    <div class="encabezado-modulo">
-      <div>
-        <p class="eyebrow">Módulo 11 · Simulación Histórica</p>
-        <h1>Módulo de Backtesting</h1>
-        <p>Evalúa el desempeño histórico de las estrategias algorítmicas de IA frente a datos del pasado antes de su despliegue en producción.</p>
+  <main class="px-6 md:px-10 pb-16 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    
+    <!-- Gráfico principal -->
+    <div class="lg:col-span-3 bg-azulinst2 border border-azulinst rounded-md p-5">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400">Curva de Equidad (Equity Curve)</h2>
+        <select class="bg-azulinst/50 border border-azulinst rounded px-3 py-1 text-slate-100 focus:outline-none font-mono text-xs">
+          <option>Últimos 12 meses</option>
+          <option>Últimos 2 años</option>
+        </select>
       </div>
-      <div class="pildora-estado">
-        <span class="punto"></span>
-        Motor de simulación en espera
-      </div>
+      <div id="equityChart" class="w-full h-[400px]"></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-titulo">
-        <h2><span class="num-seccion">1</span> Configurador de Backtesting</h2>
-      </div>
-      <p class="panel-subt">Define el universo de datos y los parámetros de la simulación histórica.</p>
-
-      <div class="grid-config">
-        <div class="campo">
-          <label for="fecha-inicio">Fecha de inicio</label>
-          <input type="date" id="fecha-inicio" value="2021-01-04">
+    <!-- KPIs de Rendimiento -->
+    <div class="space-y-6">
+      <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4 text-center">Estrategia IA</h2>
+        <div class="text-center mb-4 border-b border-azulinst pb-4">
+          <span class="block text-[10px] uppercase font-mono text-slate-400 mb-1">Retorno Total</span>
+          <span class="text-3xl font-bold text-verdeok font-mono">+42.5%</span>
         </div>
-        <div class="campo">
-          <label for="fecha-fin">Fecha de fin</label>
-          <input type="date" id="fecha-fin" value="2025-12-30">
-        </div>
-        <div class="campo">
-          <label for="capital-inicial">Capital inicial</label>
-          <div class="prefijo-input">
-            <span>$</span>
-            <input type="number" id="capital-inicial" value="100000" step="1000" min="1000">
+        <div class="space-y-3 font-mono text-sm">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Max Drawdown</span><span class="text-slate-200">-12.3%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Win Rate</span><span class="text-slate-200">68%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Factor de Beneficio</span><span class="text-oroclaro font-bold">1.85</span>
           </div>
         </div>
-        <div class="campo">
-          <label for="activo-evaluar">Activo a evaluar</label>
-          <select id="activo-evaluar">
-              <option value="FSM">FSM · Fortuna Silver Mines Inc.</option>
-              <option value="VOLCABC1.LM">VOLCABC1.LM · Volcán Cía. Minera S.A.A.</option>
-              <option value="ABX.TO">ABX.TO · Barrick Gold Corporation</option>
-              <option value="BVN">BVN · Cía. de Minas Buenaventura S.A.A.</option>
-              <option value="BHP">BHP · BHP Group Limited</option>
-         </select>
-        </div>
-        <div class="campo">
-          <label for="estrategia-ia">Estrategia algorítmica IA</label>
-          <select id="estrategia-ia">
-            <option value="momentum">Momentum Adaptativo</option>
-            <option value="reversion">Reversión a la Media</option>
-            <option value="sentimiento">Análisis de Sentimiento NLP</option>
-            <option value="arbitraje">Arbitraje Estadístico</option>
-          </select>
-        </div>
       </div>
 
-      <div style="margin-top:16px; display:flex; justify-content:flex-end;">
-        <button class="btn-simular" id="btn-simular" style="min-width:230px;">
-          <span class="icono-play"></span>
-          <span id="texto-btn-simular">Iniciar Simulación Histórica</span>
-        </button>
-      </div>
-
-      <div class="bloque-progreso" id="bloque-progreso">
-        <div class="progreso-cabecera">
-          <span class="etapa-actual" id="etapa-actual">Inicializando motor de backtesting…</span>
-          <span class="porcentaje-actual" id="porcentaje-actual">0%</span>
+      <div class="bg-azulinst/50 border border-azulinst rounded-md p-5">
+        <h2 class="font-mono text-xs tracking-wide uppercase text-slate-500 mb-4 text-center">Buy & Hold (Benchmark)</h2>
+        <div class="text-center mb-4 border-b border-azulinst/50 pb-4">
+          <span class="block text-[10px] uppercase font-mono text-slate-500 mb-1">Retorno Total</span>
+          <span class="text-2xl font-bold text-slate-300 font-mono">+18.2%</span>
         </div>
-        <div class="pista-progreso">
-          <div class="relleno-progreso" id="relleno-progreso"></div>
+        <div class="space-y-3 font-mono text-sm">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Max Drawdown</span><span class="text-slate-400">-24.8%</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="estado-vacio" id="estado-vacio">
-      <div class="icono-vacio">📈</div>
-      Configura los parámetros and pulsa "Iniciar Simulación Histórica" para generar la curva de equidad y las métricas del backtest.
-    </div>
+  </main>
 
-    <div class="zona-resultados" id="zona-resultados">
-
-      <div class="panel">
-        <div class="panel-titulo">
-          <h2><span class="num-seccion">2</span> Curva de Equidad de Rendimiento</h2>
-        </div>
-        <p class="panel-subt" id="subt-equity">Evolución del capital simulado en el periodo seleccionado.</p>
-        <div class="leyenda-curvas">
-          <div class="item-leyenda"><span class="linea-leyenda" style="background:#1F3864"></span> Estrategia IA</div>
-          <div class="item-leyenda"><span class="linea-leyenda" style="background:#9AA7B8"></span> Buy &amp; Hold</div>
-        </div>
-        <div id="grafico-equity"></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-titulo">
-          <h2><span class="num-seccion">3</span> Resumen de Métricas del Backtest</h2>
-        </div>
-        <p class="panel-subt">Indicadores estadísticos consolidados de la simulación de la Estrategia IA.</p>
-        <div class="grid-metricas" id="grid-metricas"></div>
-      </div>
-
-    </div>
-
-    <p class="nota-pie">InvestAI · Módulo 11 — Los resultados de backtesting son simulados con datos históricos y no garantizan rendimientos futuros.</p>
-
-  </div>
-
-<script>
-/* ================================================================
-   ESTADO Y REFERENCIAS DEL DOM
-================================================================ */
-const btnSimular      = document.getElementById("btn-simular");
-const textoBtnSimular = document.getElementById("texto-btn-simular");
-const bloqueProgreso  = document.getElementById("bloque-progreso");
-const rellenoProgreso = document.getElementById("relleno-progreso");
-const porcentajeActual= document.getElementById("porcentaje-actual");
-const etapaActual     = document.getElementById("etapa-actual");
-const estadoVacio     = document.getElementById("estado-vacio");
-const zonaResultados  = document.getElementById("zona-resultados");
-const subtEquity      = document.getElementById("subt-equity");
-
-// Etapas textuales mostradas durante el avance de la barra de progreso
-const etapasSimulacion = [
-  { hasta:15,  texto:"Descargando datos históricos del activo…" },
-  { hasta:40,  texto:"Calculando indicadores técnicos…" },
-  { hasta:65,  texto:"Ejecutando señales de la estrategia IA…" },
-  { hasta:85,  texto:"Comparando contra Buy & Hold…" },
-  { hasta:100, texto:"Consolidando métricas del backtest…" }
-];
-
-function obtenerTextoEtapa(porcentaje){
-  const etapa = etapasSimulacion.find(e => porcentaje <= e.hasta);
-  return etapa ? etapa.texto : "Finalizando…";
-}
-
-/* ================================================================
-   FUENTE Y PLANTILLA COMÚN PARA PLOTLY
-================================================================ */
-const fuenteBase = { family:"Segoe UI, Roboto, Helvetica, Arial, sans-serif", color:"#000000" };
-
-/* ================================================================
-   GENERACIÓN DE DATOS SIMULADOS DEL BACKTEST
-================================================================ */
-function generarSerieEquity(fechaInicio, fechaFin, capitalInicial){
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
-  const diasTotales = Math.max(30, Math.round((fin - inicio) / (1000*60*60*24)));
-  const pasoDias = Math.max(1, Math.round(diasTotales / 160));
-
-  const fechas = [];
-  const equityIA = [];
-  const equityBH = [];
-
-  let capitalIA = capitalInicial;
-  let capitalBH = capitalInicial;
-  let maxCapitalIA = capitalInicial;
-  let maxDrawdownIA = 0;
-
-  const sesgoIA = 0.00065 + Math.random()*0.0004;
-  const sesgoBH = 0.00035 + Math.random()*0.00025;
-
-  let fechaCursor = new Date(inicio);
-  let pasos = 0;
-  while(fechaCursor <= fin){
-    if(pasos > 0){
-      const ruidoIA = (Math.random() - 0.46) * 0.028;
-      const ruidoBH = (Math.random() - 0.5) * 0.024;
-      capitalIA *= (1 + sesgoIA + ruidoIA);
-      capitalBH *= (1 + sesgoBH + ruidoBH);
+  <script>
+    const API_URL = sessionStorage.getItem('apiUrl');
+    if(!API_URL) {
+      document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-rojoalerta';
+      document.getElementById('statusText').textContent = 'Sin API';
+    } else {
+      document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-verdeok';
+      document.getElementById('statusText').textContent = 'API conectada';
     }
-    fechas.push(new Date(fechaCursor));
-    equityIA.push(capitalIA);
-    equityBH.push(capitalBH);
 
-    maxCapitalIA = Math.max(maxCapitalIA, capitalIA);
-    const drawdownActual = (maxCapitalIA - capitalIA) / maxCapitalIA;
-    maxDrawdownIA = Math.max(maxDrawdownIA, drawdownActual);
+    // Datos simulados de Curva de Capital (Base = 10,000)
+    let dates = [];
+    let equityAI = [10000];
+    let equityBH = [10000];
+    let d = new Date();
+    d.setDate(d.getDate() - 250);
 
-    fechaCursor.setDate(fechaCursor.getDate() + pasoDias);
-    pasos++;
-  }
-
-  return { fechas, equityIA, equityBH, maxDrawdownIA, capitalFinalIA:capitalIA, capitalFinalBH:capitalBH };
-}
-
-/* ================================================================
-   2. RENDERIZADO DE LA CURVA DE EQUIDAD
-================================================================ */
-function renderizarCurvaEquity(serie){
-  const trazaIA = {
-    type:"scatter",
-    mode:"lines",
-    name:"Estrategia IA",
-    x:serie.fechas,
-    y:serie.equityIA,
-    line:{ color:"#1F3864", width:2.4 },
-    hovertemplate:"<b>Estrategia IA</b><br>%{x|%d %b %Y}<br>$%{y:,.0f}<extra></extra>"
-  };
-
-  const trazaBH = {
-    type:"scatter",
-    mode:"lines",
-    name:"Buy & Hold",
-    x:serie.fechas,
-    y:serie.equityBH,
-    line:{ color:"#9AA7B8", width:2, dash:"solid" },
-    hovertemplate:"<b>Buy &amp; Hold</b><br>%{x|%d %b %Y}<br>$%{y:,.0f}<extra></extra>"
-  };
-
-  const layout = {
-    template:"plotly_white",
-    margin:{ t:10, b:45, l:65, r:20 },
-    font:fuenteBase,
-    showlegend:false,
-    xaxis:{ title:"", gridcolor:"#EEF1F5" },
-    yaxis:{ title:"Capital simulado ($)", tickprefix:"$", separatethousands:true, gridcolor:"#EEF1F5" },
-    hovermode:"x unified",
-    transition:{ duration:500, easing:"cubic-in-out" }
-  };
-
-  Plotly.react("grafico-equity", [trazaBH, trazaIA], layout, { displayModeBar:false, responsive:true });
-}
-
-/* ================================================================
-   3. RENDERIZADO DEL RESUMEN DE MÉTRICAS
-================================================================ */
-function calcularMetricas(serie, capitalInicial){
-  const retornoTotal = ((serie.capitalFinalIA - capitalInicial) / capitalInicial) * 100;
-  const drawdownMax = serie.maxDrawdownIA * 100;
-
-  const totalOperaciones = 80 + Math.floor(Math.random()*140);
-  const ratioGananciaPerdida = 1.1 + Math.random()*1.3;
-  const factorProfit = 1.05 + Math.random()*1.1;
-
-  return { retornoTotal, drawdownMax, ratioGananciaPerdida, factorProfit, totalOperaciones };
-}
-
-function renderizarMetricas(m){
-  const cont = document.getElementById("grid-metricas");
-
-  const tarjetas = [
-    {
-      nombre:"Retorno Total",
-      valor: `${m.retornoTotal >= 0 ? "+" : ""}${m.retornoTotal.toFixed(1)}%`,
-      clase: m.retornoTotal >= 0 ? "positivo" : "negativo",
-      color: m.retornoTotal >= 0 ? "#2E6B4F" : "#9C3B3B",
-      nota:"Sobre el capital inicial"
-    },
-    {
-      nombre:"Drawdown Máximo",
-      valor: `-${m.drawdownMax.toFixed(1)}%`,
-      clase:"negativo",
-      color:"#9C3B3B",
-      nota:"Mayor caída desde un máximo"
-    },
-    {
-      nombre:"Ratio Ganancia / Pérdida",
-      valor: m.ratioGananciaPerdida.toFixed(2),
-      clase:"",
-      color:"#1F3864",
-      nota:"Promedio ganancia vs. promedio pérdida"
-    },
-    {
-      nombre:"Factor de Profit",
-      valor: m.factorProfit.toFixed(2),
-      clase: m.factorProfit >= 1 ? "positivo" : "negativo",
-      color: m.factorProfit >= 1 ? "#2E6B4F" : "#9C3B3B",
-      nota:"Ganancias brutas / pérdidas brutas"
-    },
-    {
-      nombre:"Operaciones Ejecutadas",
-      valor: m.totalOperaciones.toString(),
-      clase:"",
-      color:"#C5961A",
-      nota:"Total de órdenes durante el periodo"
+    for(let i=1; i<=250; i++) {
+      dates.push(new Date(d).toISOString().split('T')[0]);
+      // Simulación de rendimientos
+      let retBH = (Math.random() - 0.48) * 0.02; // Mercado ligeramente alcista
+      let retAI = (Math.random() - 0.42) * 0.018; // IA con menos drawdowns y más gains
+      
+      equityBH.push(equityBH[i-1] * (1 + retBH));
+      equityAI.push(equityAI[i-1] * (1 + retAI));
+      d.setDate(d.getDate() + 1);
     }
-  ];
+    // Ajustar el final para asegurar las métricas del dashboard simulado
+    equityAI[250] = 14250; 
+    equityBH[250] = 11820;
 
-  cont.innerHTML = tarjetas.map(t => `
-    <div class="tarjeta-metrica" style="--barra-color:${t.color}">
-      <p class="nombre-metrica">${t.nombre}</p>
-      <span class="valor-metrica ${t.clase} cifra">${t.valor}</span>
-      <p class="nota-metrica">${t.nota}</p>
-    </div>
-  `).join("");
-}
+    const traceAI = {
+      x: dates, y: equityAI.slice(1), type: 'scatter', mode: 'lines',
+      name: 'Estrategia IA', line: { color: '#E4B94E', width: 2.5 },
+      fill: 'tozeroy', fillcolor: 'rgba(228, 185, 78, 0.1)'
+    };
 
-/* ================================================================
-   4. EJECUCIÓN DE LA SIMULACIÓN CON BARRA DE PROGRESO
-================================================================ */
-let intervaloProgreso = null;
+    const traceBH = {
+      x: dates, y: equityBH.slice(1), type: 'scatter', mode: 'lines',
+      name: 'Buy & Hold', line: { color: '#64748B', width: 1.5, dash: 'dot' }
+    };
 
-function iniciarSimulacion(){
-  const fechaInicio = document.getElementById("fecha-inicio").value;
-  const fechaFin = document.getElementById("fecha-fin").value;
-  const capitalInicial = parseFloat(document.getElementById("capital-inicial").value) || 100000;
-  const activo = document.getElementById("activo-evaluar").value;
-  const estrategiaSelect = document.getElementById("estrategia-ia");
-  const estrategiaTexto = estrategiaSelect.options[estrategiaSelect.selectedIndex].text;
+    const layout = {
+      paper_bgcolor: '#16294C', plot_bgcolor: '#16294C', font: { color: '#94A3B8', family: 'Consolas, monospace' },
+      margin: { l: 50, r: 20, t: 20, b: 40 },
+      xaxis: { gridcolor: '#1F3864' },
+      yaxis: { gridcolor: '#1F3864', tickprefix: '$' },
+      legend: { orientation: 'h', y: 1.1, font: { color: '#94A3B8' } }
+    };
 
-  if(new Date(fechaInicio) >= new Date(fechaFin)){
-    alert("La fecha de inicio debe ser anterior a la fecha de fin.");
-    return;
-  }
-
-  btnSimular.disabled = true;
-  textoBtnSimular.textContent = "Simulando…";
-  bloqueProgreso.classList.add("visible");
-  estadoVacio.classList.add("oculto");
-  zonaResultados.classList.remove("revelado");
-
-  let progreso = 0;
-  rellenoProgreso.style.width = "0%";
-  porcentajeActual.textContent = "0%";
-  etapaActual.textContent = obtenerTextoEtapa(0);
-
-  intervaloProgreso = setInterval(() => {
-    const incremento = 2 + Math.random()*5;
-    progreso = Math.min(100, progreso + incremento);
-
-    rellenoProgreso.style.width = progreso + "%";
-    porcentajeActual.textContent = Math.floor(progreso) + "%";
-    etapaActual.textContent = obtenerTextoEtapa(progreso);
-
-    if(progreso >= 100){
-      clearInterval(intervaloProgreso);
-      finalizarSimulacion(fechaInicio, fechaFin, capitalInicial, activo, estrategiaTexto);
-    }
-  }, 140);
-}
-
-function finalizarSimulacion(fechaInicio, fechaFin, capitalInicial, activo, estrategiaTexto){
-  const serie = generarSerieEquity(fechaInicio, fechaFin, capitalInicial);
-  const metricas = calcularMetricas(serie, capitalInicial);
-
-  subtEquity.textContent = `${estrategiaTexto} sobre ${activo} · Capital inicial $${capitalInicial.toLocaleString("es-PE")} · ${fechaInicio} → ${fechaFin}`;
-
-  renderizarCurvaEquity(serie);
-  renderizarMetricas(metricas);
-
-  requestAnimationFrame(() => {
-    zonaResultados.classList.add("revelado");
-  });
-
-  setTimeout(() => {
-    bloqueProgreso.classList.remove("visible");
-    btnSimular.disabled = false;
-    textoBtnSimular.textContent = "Volver a Simular";
-  }, 500);
-}
-
-btnSimular.addEventListener("click", iniciarSimulacion);
-
-/* ================================================================
-   RESPONSIVE: REAJUSTE DEL GRÁFICO PLOTLY AL CAMBIAR TAMAÑO
-================================================================ */
-window.addEventListener("resize", () => {
-  const contGrafico = document.getElementById("grafico-equity");
-  if(contGrafico && contGrafico.data){
-    Plotly.Plots.resize(contGrafico);
-  }
-});
-
-/* __INVESTAI_NAV_JS__ */
-    (function(){
-      const slider = document.querySelector('.investai-nav-links');
-      if(slider){
-        let isDown=false, startX, scrollLeft, moved=false;
-        slider.addEventListener('mousedown', e=>{ isDown=true; moved=false; startX=e.pageX-slider.offsetLeft; scrollLeft=slider.scrollLeft; slider.style.cursor='grabbing'; });
-        slider.addEventListener('mouseleave', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mouseup', ()=>{ isDown=false; slider.style.cursor='grab'; });
-        slider.addEventListener('mousemove', e=>{ if(!isDown) return; e.preventDefault(); moved=true; const x=e.pageX-slider.offsetLeft; slider.scrollLeft=scrollLeft-(x-startX)*1.5; });
-        slider.addEventListener('click', e=>{ if(moved){ e.preventDefault(); e.stopPropagation(); moved=false; } }, true);
-      }
-      if(typeof window.navigateModule!=='undefined') return;
-      const cfg={
-        m1:{title:"Autenticación (M1)",desc:"Gestión de seguridad, tokens JWT y control de acceso MFA.",icon:"🔐"},
-        m2:{title:"Ingesta de Datos (M2)",desc:"Pipelines de captura y streaming desde APIs financieras.",icon:"📥"},
-        m3:{title:"Clasificación (M3)",desc:"Etiquetado de patrones de mercado mediante algoritmos supervisados.",icon:"🏷️"},
-        m4:{title:"Regresión (M4)",desc:"Modelos para estimación de precios objetivos.",icon:"📊"},
-        m5:{title:"Análisis NLP (M5)",desc:"Procesamiento de Lenguaje Natural sobre noticias financieras.",icon:"💬"},
-        m6:{title:"Core Predictivo (M6)",desc:"Núcleo central de IA que coordina todos los módulos.",icon:"🧠"},
-        m7:{title:"Estrategias (M7)",desc:"Generación algorítmica de reglas operativas.",icon:"💡"},
-        m8:{title:"Órdenes (M8)",desc:"Enrutador inteligente con control estricto de Slippage.",icon:"⚡"},
-        m9:{title:"Portafolios (M9)",desc:"Rebalanceo automático mediante optimización de varianza media.",icon:"💼"},
-        m10:{title:"Consola (M10)",desc:"Panel de administración para control de umbrales operativos.",icon:"🖥️"},
-        m11:{title:"Backtesting (M11)",desc:"Simulador sobre series históricas con métricas Sharpe y Sortino.",icon:"⏳"}
-      };
-      window.navigateModule=function(id,e){
-        const link=document.getElementById('nav-'+id); if(!link) return;
-        const url=link.getAttribute('href');
-        if(!url||url==='#'){e.preventDefault();window.showPlaceholderView(id);return;}
-        e.preventDefault();
-        fetch(url,{method:'HEAD'}).then(r=>r.ok?window.location.href=url:window.showPlaceholderView(id)).catch(()=>window.location.href=url);
-      };
-      window.showPlaceholderView=function(id){
-        const c=cfg[id]; if(!c) return;
-        document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active-view'));
-        const ph=document.getElementById('view-placeholder');
-        if(ph){
-          const keys=['placeholder-title','placeholder-panel-title','placeholder-desc','placeholder-icon'];
-          const vals=[c.title,c.title+' en Desarrollo',c.desc,c.icon];
-          keys.forEach((k,i)=>{ const el=document.getElementById(k); if(el) el.innerText=vals[i]; });
-          ph.classList.add('active-view');
-        }
-        document.querySelectorAll('.investai-nav-links a').forEach(a=>a.classList.remove('active-tab'));
-        const al=document.getElementById('nav-'+id); if(al) al.classList.add('active-tab');
-      };
-      window.resetToCore=function(){window.location.href='modulo6.6-core-predictivo-central.html';};
-    })();
-/* __INVESTAI_NAV_JS__ */
+    Plotly.newPlot('equityChart', [traceAI, traceBH], layout, { responsive: true, displayModeBar: false });
   </script>
-  <script src="investai-api-integration.js"></script>
 </body>
 </html>
