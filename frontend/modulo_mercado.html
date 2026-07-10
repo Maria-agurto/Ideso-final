@@ -9,6 +9,20 @@
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
 <script>
+  // ============================================================
+// 🔒 AUTH GUARD: Verificar si el usuario ha iniciado sesión
+// ============================================================
+(function verificarSesion() {
+  // Buscamos los datos del usuario en el almacenamiento local
+  const usuarioActivo = localStorage.getItem('investai_user');
+  
+  // Si no hay usuario y no estamos en la página de login, lo expulsamos
+  if (!usuarioActivo) {
+    alert("🔒 Acceso denegado. Por favor, inicia sesión para acceder al sistema InvestAI.");
+    window.location.replace("modulo6.1-autenticacion.html"); // Redirección forzada
+  }
+})();
+// ============================================================
   tailwind.config = {
     theme: {
       extend: {
