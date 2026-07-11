@@ -41,39 +41,43 @@
         <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Portafolio Óptimo (Max Sharpe)</h2>
         <div class="space-y-3 font-mono text-sm">
           <div class="flex justify-between border-b border-azulinst pb-2">
-            <span class="text-slate-400">Retorno Esperado (Anual)</span><span class="text-verdeok font-bold">18.4%</span>
+            <span class="text-slate-400">Retorno Esperado (Anual)</span><span id="valRetorno" class="text-verdeok font-bold">—</span>
           </div>
           <div class="flex justify-between border-b border-azulinst pb-2">
-            <span class="text-slate-400">Volatilidad (Riesgo)</span><span class="text-rojoalerta font-bold">12.1%</span>
+            <span class="text-slate-400">Volatilidad (Riesgo)</span><span id="valVolatilidad" class="text-rojoalerta font-bold">—</span>
           </div>
           <div class="flex justify-between pb-2">
-            <span class="text-slate-400">Ratio de Sharpe</span><span class="text-oroclaro font-bold">1.52</span>
+            <span class="text-slate-400">Ratio de Sharpe</span><span id="valSharpe" class="text-oroclaro font-bold">—</span>
           </div>
         </div>
       </div>
 
       <div class="bg-azulinst2 border border-azulinst rounded-md p-5">
         <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Asignación de Activos</h2>
-        <div class="space-y-4">
+        <div class="space-y-4" id="asignacionActivos">
           <div>
-            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">FSM</span><span class="text-oroclaro">35%</span></div>
-            <div class="w-full bg-azulinst rounded-full h-1.5"><div class="bg-oro h-1.5 rounded-full" style="width: 35%"></div></div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">FSM</span><span id="pct-FSM" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-FSM" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
           </div>
           <div>
-            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">BHP</span><span class="text-oroclaro">25%</span></div>
-            <div class="w-full bg-azulinst rounded-full h-1.5"><div class="bg-oro h-1.5 rounded-full" style="width: 25%"></div></div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">VOLCABC1.LM</span><span id="pct-VOLCABC1.LM" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-VOLCABC1.LM" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
           </div>
           <div>
-            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">ABX.TO</span><span class="text-oroclaro">20%</span></div>
-            <div class="w-full bg-azulinst rounded-full h-1.5"><div class="bg-oro h-1.5 rounded-full" style="width: 20%"></div></div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">ABX.TO</span><span id="pct-ABX.TO" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-ABX.TO" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
           </div>
           <div>
-            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">BVN</span><span class="text-oroclaro">15%</span></div>
-            <div class="w-full bg-azulinst rounded-full h-1.5"><div class="bg-oro h-1.5 rounded-full" style="width: 15%"></div></div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">BVN</span><span id="pct-BVN" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-BVN" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
           </div>
           <div>
-            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">VOLCABC1.LM</span><span class="text-oroclaro">5%</span></div>
-            <div class="w-full bg-azulinst rounded-full h-1.5"><div class="bg-oro h-1.5 rounded-full" style="width: 5%"></div></div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">BHP</span><span id="pct-BHP" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-BHP" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs font-mono mb-1"><span class="text-slate-200">CASH</span><span id="pct-CASH" class="text-oroclaro">—</span></div>
+            <div class="w-full bg-azulinst rounded-full h-1.5"><div id="bar-CASH" class="bg-oro h-1.5 rounded-full" style="width: 0%"></div></div>
           </div>
         </div>
       </div>
@@ -82,53 +86,107 @@
     <!-- Panel Derecho: Gráfico Plotly -->
     <div class="lg:col-span-2 bg-azulinst2 border border-azulinst rounded-md p-5">
       <h2 class="font-mono text-xs tracking-wide uppercase text-slate-400 mb-4">Frontera Eficiente de Markowitz</h2>
+      <p id="portafolioMsg" class="font-mono text-xs text-slate-400 mb-2"></p>
       <div id="efficientFrontier" class="w-full h-[450px]"></div>
     </div>
   </main>
 
   <script>
     const API_URL = sessionStorage.getItem('apiUrl');
-    if(!API_URL) {
-      document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-rojoalerta';
-      document.getElementById('statusText').textContent = 'Sin API';
-    } else {
+    const TICKERS = ["FSM", "VOLCABC1.LM", "ABX.TO", "BVN", "BHP"];
+    const msgEl = document.getElementById('portafolioMsg');
+
+    function pintarVacio(layout) {
+      Plotly.newPlot('efficientFrontier', [], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function renderizarGrafico(frontera, actual, optimo) {
+      const traceNube = {
+        x: frontera.riesgo, y: frontera.retorno, mode: 'markers', type: 'scatter',
+        marker: { size: 5, color: frontera.riesgo.map((r, i) => (frontera.retorno[i] - 2) / r), colorscale: 'Viridis', showscale: true,
+          colorbar: { title: 'Sharpe Ratio', tickfont: {color: '#94A3B8'}, titlefont: {color: '#94A3B8'} } },
+        name: 'Carteras simuladas (Monte Carlo, API)'
+      };
+
+      const traceActual = {
+        x: [actual.riesgo], y: [actual.retorno], mode: 'markers', type: 'scatter',
+        marker: { symbol: 'circle', size: 14, color: '#94A3B8', line: {width: 1, color: '#FFFFFF'} },
+        name: 'Cartera actual'
+      };
+
+      const traceOptimo = {
+        x: [optimo.riesgo], y: [optimo.retorno], mode: 'markers', type: 'scatter',
+        marker: { symbol: 'star', size: 16, color: '#E4B94E', line: {width: 1, color: '#FFFFFF'} },
+        name: 'Óptimo (Max Sharpe)'
+      };
+
+      const layout = {
+        paper_bgcolor: '#16294C', plot_bgcolor: '#16294C', font: { color: '#94A3B8', family: 'Consolas, monospace' },
+        margin: { l: 50, r: 20, t: 30, b: 50 },
+        xaxis: { title: 'Volatilidad / Riesgo Anual (%)', gridcolor: '#1F3864' },
+        yaxis: { title: 'Retorno Esperado Anual (%)', gridcolor: '#1F3864' },
+        showlegend: true, legend: { font: { color: '#94A3B8', size: 10 } }
+      };
+
+      Plotly.newPlot('efficientFrontier', [traceNube, traceActual, traceOptimo], layout, { responsive: true, displayModeBar: false });
+    }
+
+    function pintarAsignacion(pesos) {
+      Object.keys(pesos).forEach(ticker => {
+        const barEl = document.getElementById(`bar-${ticker}`);
+        const pctEl = document.getElementById(`pct-${ticker}`);
+        if (barEl && pctEl) {
+          barEl.style.width = `${pesos[ticker]}%`;
+          pctEl.textContent = `${pesos[ticker].toFixed(1)}%`;
+        }
+      });
+    }
+
+    async function cargarPortafolio() {
+      if (!API_URL) {
+        document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-rojoalerta';
+        document.getElementById('statusText').textContent = 'Sin API';
+        msgEl.textContent = 'Conecta la API desde el portal (index.html) para optimizar el portafolio.';
+        pintarVacio({ paper_bgcolor: '#16294C', plot_bgcolor: '#16294C' });
+        return;
+      }
+
       document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-verdeok';
       document.getElementById('statusText').textContent = 'API conectada';
+      msgEl.textContent = 'Calculando la frontera eficiente con datos reales…';
+
+      // Cartera actual de referencia: equiponderada entre los 5 tickers, sin CASH.
+      // (Este módulo aún no tiene un formulario donde el usuario ingrese sus
+      // pesos reales; se puede reemplazar este arreglo por los pesos que
+      // ingrese el usuario en un futuro formulario.)
+      const activos = TICKERS.map(ticker => ({ ticker, peso: 100 / TICKERS.length }));
+
+      try {
+        const res = await fetch(`${API_URL}/api/portafolio/optimizar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ activos, capital_total: 100000 })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById('valRetorno').textContent = `${data.optimo.retorno.toFixed(1)}%`;
+        document.getElementById('valVolatilidad').textContent = `${data.optimo.riesgo.toFixed(1)}%`;
+        document.getElementById('valSharpe').textContent = data.ratios.optimizado.sharpe.toFixed(2);
+
+        pintarAsignacion(data.optimo.pesos);
+        renderizarGrafico(data.frontera, data.actual, data.optimo);
+
+        msgEl.textContent = `Datos reales de /api/portafolio/optimizar · cartera actual de referencia equiponderada entre los 5 tickers.`;
+      } catch (err) {
+        document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-rojoalerta';
+        document.getElementById('statusText').textContent = 'Error de conexión';
+        msgEl.textContent = `No se pudo calcular el portafolio: ${err.message}`;
+        pintarVacio({ paper_bgcolor: '#16294C', plot_bgcolor: '#16294C' });
+      }
     }
 
-    // Generar datos simulados para la nube de Monte Carlo (Frontera Eficiente)
-    let vol = [], ret = [], sharpe = [];
-    for(let i=0; i<1000; i++) {
-      let v = 0.08 + Math.random() * 0.15; // Riesgo entre 8% y 23%
-      let r = 0.05 + Math.random() * 0.20; // Retorno entre 5% y 25%
-      // Curvar ligeramente para que parezca una frontera eficiente realista
-      if (r > v * 1.5 + Math.random()*0.05) continue; 
-      vol.push(v * 100);
-      ret.push(r * 100);
-      sharpe.push((r - 0.02) / v);
-    }
-
-    const trace1 = {
-      x: vol, y: ret, mode: 'markers', type: 'scatter',
-      marker: { size: 5, color: sharpe, colorscale: 'Viridis', showscale: true, colorbar: { title: 'Sharpe Ratio', tickfont: {color: '#94A3B8'}, titlefont: {color: '#94A3B8'} } },
-      name: 'Portafolios (Simulación)'
-    };
-
-    const trace2 = {
-      x: [12.1], y: [18.4], mode: 'markers', type: 'scatter',
-      marker: { symbol: 'star', size: 16, color: '#E4B94E', line: {width: 1, color: '#FFFFFF'} },
-      name: 'Óptimo (Max Sharpe)'
-    };
-
-    const layout = {
-      paper_bgcolor: '#16294C', plot_bgcolor: '#16294C', font: { color: '#94A3B8', family: 'Consolas, monospace' },
-      margin: { l: 50, r: 20, t: 30, b: 50 },
-      xaxis: { title: 'Volatilidad / Riesgo Anual (%)', gridcolor: '#1F3864' },
-      yaxis: { title: 'Retorno Esperado Anual (%)', gridcolor: '#1F3864' },
-      showlegend: false
-    };
-
-    Plotly.newPlot('efficientFrontier', [trace1, trace2], layout, { responsive: true, displayModeBar: false });
+    cargarPortafolio();
   </script>
 </body>
 </html>
